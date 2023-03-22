@@ -1,0 +1,13 @@
+version: 0.2
+
+env:
+  shell: bash
+  parameter-store: 
+    BUCKET_NAME_PREFIX: /development/build/BUCKET_NAME_PREFIX 
+    BUCKET_KEY_PREFIX: /development/build/BUCKET_KEY_PREFIX
+
+phases:
+  build:
+    on-failure: ABORT
+    commands:
+      - scripts/deploy-global.sh

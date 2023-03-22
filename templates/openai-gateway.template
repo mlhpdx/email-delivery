@@ -1,0 +1,142 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Transform": "AWS::Serverless-2016-10-31",
+  "Description": "A service component for making controlled requests to OpenAI's Cloud API.",
+  "Resources": {
+    "GatewayToOpenAI": {
+      "Type": "AWS::ApiGateway::RestApi",
+      "Properties": {
+        "Name": "Gateway to OpenAI API",
+        "Description": "HTTP proxy to OpenAI's API. Required since Sfn can't directly make HTTP requests. Not a simple HTTP Proxy since some transformation is required due to limits on the use of the Authorization HTTP header, and mixed Content-Types.",
+        "EndpointConfiguration": {
+          "Types": [
+            "REGIONAL"
+          ]
+        }
+      }
+    },
+    "GatewayChat": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "ParentId": {
+          "Fn::GetAtt": [
+            "GatewayToOpenAI",
+            "RootResourceId"
+          ]
+        },
+        "PathPart": "chat",
+        "RestApiId": {
+          "Ref": "GatewayToOpenAI"
+        }
+      }
+    },
+    "GatewayCompletions": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "ParentId": {
+          "Fn::GetAtt": [
+            "GatewayChat",
+            "ResourceId"
+          ]
+        },
+        "PathPart": "completions",
+        "RestApiId": {
+          "Ref": "GatewayToOpenAI"
+        }
+      }
+    },
+    "GatewayCompletionsPost": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "GatewayToOpenAI"
+        },
+        "ResourceId": {
+          "Ref": "GatewayCompletions"
+        },
+        "HttpMethod": "POST",
+        "AuthorizationType": "AWS_IAM",
+        "ApiKeyRequired": false,
+        "MethodResponses": [
+          {
+            "StatusCode": "200",
+            "ResponseModels": {
+              "application/json": "Empty"
+            }
+          }
+        ],
+        "Integration": {
+          "Type": "HTTP",
+          "IntegrationHttpMethod": "POST",
+          "Uri": "https://api.openai.com/v1/chat/completions",
+          "ConnectionType": "INTERNET",
+          "RequestParameters": {
+            "integration.request.header.Authorization": "'Bearer {{resolve:secretsmanager:OPENAI:SecretString:API_TOKEN}}'",
+            "integration.request.header.Content-Type": "'application/json'"
+          },
+          "RequestTemplates": {
+          },
+          "PassthroughBehavior": "WHEN_NO_TEMPLATES",
+          "TimeoutInMillis": 29000,
+          "IntegrationResponses": [
+            {
+              "StatusCode": "200",
+              "SelectionPattern": "",
+              "ResponseTemplates": {
+              }
+            }
+          ]
+        }
+      }
+    },
+    "GatewayV1": {
+      "DependsOn": [
+        "GatewayCompletionsPost"
+      ],
+      "Type": "AWS::ApiGateway::Stage",
+      "Properties": {
+        "CacheClusterEnabled": false,
+        "DeploymentId": {
+          "Ref": "GatewayDeployment1"
+        },
+        "Description": "The one and only stage.",
+        "MethodSettings": [
+          {
+            "DataTraceEnabled": true,
+            "HttpMethod": "*",
+            "LoggingLevel": "INFO",
+            "MetricsEnabled": true,
+            "ResourcePath": "/*",
+            "ThrottlingBurstLimit": 20,
+            "ThrottlingRateLimit": 10
+          }
+        ],
+        "RestApiId": {
+          "Ref": "GatewayToOpenAI"
+        },
+        "StageName": "v1",
+        "TracingEnabled": true
+      }
+    },
+    "GatewayDeployment1": {
+      "DependsOn": [
+        "GatewayCompletionsPost"
+      ],
+      "Type": "AWS::ApiGateway::Deployment",
+      "Properties": {
+        "Description": "Initial deployment.",
+        "RestApiId": {
+          "Ref": "GatewayToOpenAI"
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "EndpointDomain": {
+      "Description": "OpenAI Gateway Domain",
+      "Value": {
+        "Fn::Sub":"${GatewayToOpenAI}.execute-api.${AWS::Region}.amazonaws.com"
+      }
+    }  
+  }
+}

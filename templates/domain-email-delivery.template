@@ -1,0 +1,212 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Transform": [
+    "AWS::Serverless-2016-10-31"
+  ],
+  "Description": "Setup SES email receiving with delivery to mailboxes in S3 and extaction of email attachments.",
+  "Parameters": {
+    "DomainName": {
+      "Type": "String"
+    },
+    "BucketName": {
+      "Type": "String"
+    },
+    "SesRuleSetName": {
+      "Type": "String"
+    }
+  },
+  "Resources": {
+    "MxRecordSet": {
+      "Type": "AWS::Route53::RecordSet",
+      "Properties": {
+        "HostedZoneName": {
+          "Fn::Sub": "${DomainName}."
+        },
+        "Type": "MX",
+        "TTL": "300",
+        "Name": {
+          "Ref": "DomainName"
+        },
+        "Region": { "Ref": "AWS::Region" },
+        "SetIdentifier": { "Fn::Sub": "email-service-mx-${AWS::Region}" },
+        "ResourceRecords": [
+          {
+            "Fn::Sub": "10 inbound-smtp.${AWS::Region}.amazonaws.com"
+          }
+        ]
+      }
+    },
+    "FeedbackRecordSet1": {
+      "Type": "AWS::Route53::RecordSet",
+      "Properties": {
+        "HostedZoneName": {
+          "Fn::Sub": "${DomainName}."
+        },
+        "Type": "MX",
+        "TTL": "300",
+        "Name": {
+          "Fn::Sub": "email.${DomainName}"
+        },
+        "Region": { "Ref": "AWS::Region" },
+        "SetIdentifier": { "Fn::Sub": "email-service-fb-${AWS::Region}" },
+        "ResourceRecords": [
+          {
+            "Fn::Sub": "10 feedback-smtp.${AWS::Region}.amazonses.com"
+          }
+        ]
+      }
+    },
+    "SesDomain": {
+      "Type": "AWS::SES::EmailIdentity",
+      "Properties": {
+        "DkimAttributes": {
+          "SigningEnabled": true
+        },
+        "DkimSigningAttributes": {
+          "NextSigningKeyLength": "RSA_2048_BIT"
+        },
+        "EmailIdentity": {
+          "Ref": "DomainName"
+        },
+        "FeedbackAttributes": {
+          "EmailForwardingEnabled": true
+        },
+        "MailFromAttributes": {
+          "BehaviorOnMxFailure": "USE_DEFAULT_VALUE",
+          "MailFromDomain": {
+            "Fn::Sub": "email.${DomainName}"
+          }
+        }
+      }
+    },
+    "DkimRecordSet1": {
+      "Type": "AWS::Route53::RecordSet",
+      "Properties": {
+        "HostedZoneName": {
+          "Fn::Sub": "${DomainName}."
+        },
+        "Type": "TXT",
+        "TTL": "300",
+        "Name": {
+          "Fn::GetAtt": [
+            "SesDomain",
+            "DkimDNSTokenName1"
+          ]
+        },
+        "ResourceRecords": [
+          { "Fn::Join": 
+            [ 
+              "", 
+              [
+                "\"",
+                {
+                  "Fn::GetAtt": [
+                    "SesDomain",
+                    "DkimDNSTokenValue1"
+                  ]
+                },
+                "\""
+              ] 
+            ] 
+          }
+        ]
+      }
+    },
+    "DkimRecordSet2": {
+      "Type": "AWS::Route53::RecordSet",
+      "Properties": {
+        "HostedZoneName": {
+          "Fn::Sub": "${DomainName}."
+        },
+        "Type": "TXT",
+        "TTL": "300",
+        "Name": {
+          "Fn::GetAtt": [
+            "SesDomain",
+            "DkimDNSTokenName2"
+          ]
+        },
+        "ResourceRecords": [
+          { "Fn::Join": 
+            [ 
+              "", 
+              [
+                "\"",
+                {
+                  "Fn::GetAtt": [
+                    "SesDomain",
+                    "DkimDNSTokenValue2"
+                  ]
+                },
+                "\""
+              ] 
+            ] 
+          }
+        ]
+      }
+    },
+    "DkimRecordSet3": {
+      "Type": "AWS::Route53::RecordSet",
+      "Properties": {
+        "HostedZoneName": {
+          "Fn::Sub": "${DomainName}."
+        },
+        "Type": "TXT",
+        "TTL": "300",
+        "Name": {
+          "Fn::GetAtt": [
+            "SesDomain",
+            "DkimDNSTokenName3"
+          ]
+        },
+        "ResourceRecords": [
+          { "Fn::Join": 
+            [ 
+              "", 
+              [
+                "\"",
+                {
+                  "Fn::GetAtt": [
+                    "SesDomain",
+                    "DkimDNSTokenValue3"
+                  ]
+                },
+                "\""
+              ] 
+            ] 
+          }
+        ]
+      }
+    },
+    "SesReceiptRule": {
+      "Type": "AWS::SES::ReceiptRule",
+      "Properties": {
+        "RuleSetName": {
+          "Ref": "SesRuleSetName"
+        },
+        "Rule": {
+          "Enabled": true,
+          "ScanEnabled": true,
+          "Actions": [
+            {
+              "S3Action": {
+                "BucketName": {
+                  "Ref": "BucketName"
+                },
+                "ObjectKeyPrefix": { "Fn::Sub": "inbox/${DomainName}" }
+              }
+            }
+          ],
+          "Recipients": [
+            {
+              "Fn::Sub": "${DomainName}"
+            },
+            {
+              "Fn::Sub": ".${DomainName}"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

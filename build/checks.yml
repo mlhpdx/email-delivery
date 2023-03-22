@@ -1,0 +1,17 @@
+version: 0.2
+
+env:
+  shell: bash
+  parameter-store: 
+    BUCKET_NAME_PREFIX: /development/build/BUCKET_NAME_PREFIX 
+    BUCKET_KEY_PREFIX: /development/build/BUCKET_KEY_PREFIX
+
+phases:
+  install:
+    on-failure: ABORT
+    commands:
+      - pip install cfn-lint
+  build:
+    on-failure: ABORT
+    commands:
+      - scripts/checks.sh

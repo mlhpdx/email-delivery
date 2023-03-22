@@ -1,0 +1,167 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Transform": [
+    "AWS::Serverless-2016-10-31"
+  ],
+  "Description": "Setup SES email receiving with delivery to mailboxes in S3 and extaction of email attachments.",
+  "Parameters": {
+    "DomainName1": {
+      "Type": "String"
+    },
+    "DomainName2": {
+      "Type": "String"
+    }
+  },
+  "Resources": {
+    "Table": {
+      "Type": "AWS::DynamoDB::GlobalTable",
+      "Properties": {
+        "BillingMode": "PAY_PER_REQUEST",
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "PK",
+            "AttributeType": "S"
+          },
+          {
+            "AttributeName": "SK",
+            "AttributeType": "S"
+          },
+          {
+            "AttributeName": "GSI1PK",
+            "AttributeType": "S"
+          },
+          {
+            "AttributeName": "GSI1SK",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "PK",
+            "KeyType": "HASH"
+          },
+          {
+            "AttributeName": "SK",
+            "KeyType": "RANGE"
+          }
+        ],
+        "StreamSpecification": {
+          "StreamViewType": "NEW_AND_OLD_IMAGES"
+        },
+        "GlobalSecondaryIndexes": [
+          {
+            "IndexName": "GSI1",
+            "KeySchema": [
+              {
+                "AttributeName": "GSI1PK",
+                "KeyType": "HASH"
+              },
+              {
+                "AttributeName": "GSI1SK",
+                "KeyType": "RANGE"
+              }
+            ],
+            "Projection": {
+              "ProjectionType": "ALL"
+            }
+          }
+        ],
+        "Replicas": [
+          {
+            "Region": "us-west-2",
+            "PointInTimeRecoverySpecification": {
+              "PointInTimeRecoveryEnabled": true
+            }
+          },
+          {
+            "Region": "eu-west-1",
+            "PointInTimeRecoverySpecification": {
+              "PointInTimeRecoveryEnabled": true
+            }
+          },
+          {
+            "Region": "us-east-2",
+            "PointInTimeRecoverySpecification": {
+              "PointInTimeRecoveryEnabled": true
+            }
+          }
+        ]
+      }
+    },
+
+    "SpfRecordSet1": {
+      "Type": "AWS::Route53::RecordSet",
+      "Properties": {
+        "HostedZoneName": {
+          "Fn::Sub": "${DomainName1}."
+        },
+        "Type": "TXT",
+        "TTL": "300",
+        "Name": {
+          "Fn::Sub": "email.${DomainName1}"
+        },
+        "ResourceRecords": [
+          "\"v=spf1 include:amazonses.com ~all\""
+        ]
+      }
+    },
+    "SpfRecordSet2": {
+      "Type": "AWS::Route53::RecordSet",
+      "Properties": {
+        "HostedZoneName": {
+          "Fn::Sub": "${DomainName2}."
+        },
+        "Type": "TXT",
+        "TTL": "300",
+        "Name": {
+          "Fn::Sub": "email.${DomainName2}"
+        },
+        "ResourceRecords": [
+          "\"v=spf1 include:amazonses.com ~all\""
+        ]
+      }
+    },
+
+    "EbRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": {
+                  "Fn::Sub": "events.amazonaws.com"
+                }
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Path": "/",
+        "Policies": [ ]
+      }
+    }
+  },
+  "Outputs": {
+		"GlobalTableName": {
+			"Description": "DDB Global Table Name",
+			"Value": {
+				"Ref":"Table"
+			}
+		},
+		"GlobalTableArn": {
+			"Description": "DDB Global Table ARN (only use when you need the table in the region originaly deployed, not the regional replica)",
+			"Value": {
+				"Fn::GetAtt": [ "Table", "Arn" ]
+			}
+		},
+		"EventBridgeRoleArn": {
+			"Description": "EventBridge Role Arn",
+			"Value": {
+				"Fn::GetAtt": [ "EbRole", "Arn" ]
+			}
+		}
+	}
+}

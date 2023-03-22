@@ -1,0 +1,5 @@
+
+{
+    "function-name" : "email-delivery",
+    "function-runtime" : "dotnet6"
+}

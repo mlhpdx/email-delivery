@@ -1,0 +1,117 @@
+{
+  "Comment": "Receives S3 Event when new emails are delivered by SES, parses useful fields, extracts attachments, generates an AI summary, and puts a rich event message to Event Bridge to trigger downstream processing and automation.",
+  "StartAt": "Parse Message and Decode Attachments",
+  "States": {
+    "Parse Message and Decode Attachments": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "${DeliveryLambdaArn}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Get OpenAI Summary",
+      "ResultSelector": {
+        "message.$": "$.Payload"
+      }
+    },
+    "Get OpenAI Summary": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::apigateway:invoke",
+      "Parameters": {
+        "ApiEndpoint": "${OpenAiGatewayDomain}",
+        "Method": "POST",
+        "Path": "/v1/chat/completions",
+        "RequestBody": {
+          "model": "gpt-3.5-turbo",
+          "messages": [
+            {
+              "role": "user",
+              "content.$": "States.Format('What is the goal of the sender of this email in 12 words or less? \n{}', $.message.text)"
+            }
+          ],
+          "temperature": 0.7
+        },
+        "AuthType": "IAM_ROLE"
+      },
+      "Next": "Merge Message and OpenAI Summary",
+      "ResultPath": "$.openai",
+      "ResultSelector": {
+        "summary.$": "$.ResponseBody.choices[0].message.content"
+      }
+    },
+    "Merge Message and OpenAI Summary": {
+      "Type": "Pass",
+      "Next": "Update Mailbox Indexes",
+      "Parameters": {
+        "message.$": "States.JsonMerge($.message,$.openai,false)"
+      }
+    },
+    "Update Mailbox Indexes": {
+      "Type": "Map",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Add to Mailbox",
+        "States": {
+          "Add to Mailbox": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:putItem",
+            "Parameters": {
+              "TableName": "${TableName}",
+              "Item": {
+                "PK": {
+                  "S.$": "States.Format('MSG|{}|{}',$.recipient,States.ArrayGetItem(States.StringSplit($.message.date,'T'),0))"
+                },
+                "SK": {
+                  "S.$": "$.message.message_id"
+                },
+                "GSI1PK": {
+                  "S.$": "States.Format('MSG|{}',$.message.message_id)"
+                },
+                "GSI1SK": {
+                  "S.$": "States.Format('{}|{}',$.recipient,States.ArrayGetItem(States.StringSplit($.message.date,'T'),0))"
+                }
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "Next": "Send Summary Event",
+      "ItemsPath": "$.message.recipients",
+      "ItemSelector": {
+        "recipient.$": "$$.Map.Item.Value",
+        "message.$": "$.message"
+      },
+      "ResultPath": null
+    },
+    "Send Summary Event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:eventbridge:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "Detail.$": "$.message",
+            "DetailType": "summary",
+            "Source": "email-delivery"
+          }
+        ]
+      },
+      "End": true
+    }
+  }
+}

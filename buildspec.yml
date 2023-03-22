@@ -1,0 +1,30 @@
+version: 0.2
+env:
+  shell: /bin/bash
+  parameter-store: 
+    BUCKET_NAME_PREFIX: /development/build/BUCKET_NAME_PREFIX 
+    BUCKET_KEY_PREFIX: /development/build/BUCKET_KEY_PREFIX
+
+batch:
+  fast-fail: false
+  build-graph:
+    - identifier: checks
+      buildspec: build/checks.yml
+      ignore-failure: false
+    - identifier: global
+      ignore-failure: false
+      buildspec: build/deploy-global.yml
+      depend-on:
+        - checks
+    - identifier: regions
+      ignore_failure: false
+      depend-on:
+        - global
+      buildspec: build/deploy-region.yml
+      ignore-failure: false
+          
+phases:
+  build:
+    on-failure: ABORT
+    commands:
+      - echo "Ziggy was here."
