@@ -105,6 +105,19 @@
       },
       "ForEach": "DomainNames"
     },
+    "DmarcRecordSet%d": {
+      "Type": "AWS::Route53::RecordSet",
+      "Properties": {
+        "HostedZoneName": "%v.",
+        "Type": "TXT",
+        "TTL": "300",
+        "Name": "_DMARC.%v",
+        "ResourceRecords": [
+          "\"v=DMARC1; p=none; rua=mailto:dmarc@%v; ruf=mailto:dmarc@%v; fo=1\""
+        ]
+      },
+      "ForEach": "DomainNames"
+    },
 
     "EbRole": {
       "Type": "AWS::IAM::Role",
