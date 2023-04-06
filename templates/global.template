@@ -95,12 +95,10 @@
     "SpfRecordSet%d": {
       "Type": "AWS::Route53::RecordSet",
       "Properties": {
-        "HostedZoneName": "%v",
+        "HostedZoneName": "%v.",
         "Type": "TXT",
         "TTL": "300",
-        "Name": {
-          "Fn::Sub": "email.%v"
-        },
+        "Name": "email.%v",
         "ResourceRecords": [
           "\"v=spf1 include:amazonses.com ~all\""
         ]
