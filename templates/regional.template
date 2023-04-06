@@ -1,15 +1,14 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Transform": [
+    "AWS::LanguageExtensions",
     "AWS::Serverless-2016-10-31"
   ],
   "Description": "Setup SES email receiving with delivery to mailboxes in S3 and extaction of email attachments.",
   "Parameters": {
-    "DomainName1": {
-      "Type": "String"
-    },
-    "DomainName2": {
-      "Type": "String"
+    "DomainNames": {
+      "Type": "CommaDelimitedList",
+      "Default": "foo.com, bar.com"
     },
     "EventBridgeRoleArn": {
       "Type": "String"
@@ -200,13 +199,11 @@
       }
     },
 
-    "Domain1": {
+    "Domain%d": {
       "Type": "AWS::Serverless::Application",
       "Properties": {
         "Parameters": {
-          "DomainName": {
-            "Ref": "DomainName1"
-          },
+          "DomainName": "%v",
           "BucketName": {
             "Ref": "Bucket"
           },
@@ -216,25 +213,8 @@
         },
         "Location": "domain-email-delivery.template",
         "Tags": { "Name": { "Fn::Sub": "${AWS::StackName}" } }
-      }
-    },
-    "Domain2": {
-      "Type": "AWS::Serverless::Application",
-      "Properties": {
-        "Parameters": {
-          "DomainName": {
-            "Ref": "DomainName2"
-          },
-          "BucketName": {
-            "Ref": "Bucket"
-          },
-          "SesRuleSetName": {
-            "Ref": "SesRuleSet"
-          }
-        },
-        "Location": "domain-email-delivery.template",
-        "Tags": { "Name": { "Fn::Sub": "${AWS::StackName}" } }
-      }
-    }      
+      },
+      "ForEach": "DomainNames"
+    }
   }
 }
