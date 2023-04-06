@@ -1,7 +1,7 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Transform": [
-    "AWS::LanguageExtensions",
+    "ForEach",
     "AWS::Serverless-2016-10-31"
   ],
   "Description": "Setup SES email receiving with delivery to mailboxes in S3 and extaction of email attachments.",
