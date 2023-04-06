@@ -32,7 +32,7 @@ With those in place, when someone sends an email to any address at your domains 
 
 AWS is not free, so be aware of the pricing and take that into consideration.  The resources created by this repo are very inexpensive, but not free and in certain circumstances can become expensive.
 
-Also, this may not align with your concept of a production quality stack -- it's a work in progress. It doesn't have managed (any?) encryption, relies on AWS for spam protection (which you are on the hook to pay for), doesn't include logging or monitoring, etc.  
+Also, this may not align with your concept of a production quality stack -- it's a work in progress. It doesn't have managed (any?) encryption, relies on AWS for spam protection (which you are on the hook to pay for), doesn't include logging or monitoring, etc.
 
 To make it simple to customize the list of domains, this solution makes use of my cloudformation macro "ForEach". Don't forget to add that to your account or this solution won't deploy.
 
