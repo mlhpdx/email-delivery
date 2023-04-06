@@ -85,7 +85,7 @@
         "HostedZoneName": {
           "Fn::Sub": "${DomainName}."
         },
-        "Type": "TXT",
+        "Type": "CNAME",
         "TTL": "300",
         "Name": {
           "Fn::GetAtt": [
@@ -118,7 +118,7 @@
         "HostedZoneName": {
           "Fn::Sub": "${DomainName}."
         },
-        "Type": "TXT",
+        "Type": "CNAME",
         "TTL": "300",
         "Name": {
           "Fn::GetAtt": [
@@ -151,7 +151,7 @@
         "HostedZoneName": {
           "Fn::Sub": "${DomainName}."
         },
-        "Type": "TXT",
+        "Type": "CNAME",
         "TTL": "300",
         "Name": {
           "Fn::GetAtt": [
