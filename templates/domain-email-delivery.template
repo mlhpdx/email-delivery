@@ -94,19 +94,9 @@
           ]
         },
         "ResourceRecords": [
-          { "Fn::Join": 
-            [ 
-              "", 
-              [
-                "\"",
-                {
-                  "Fn::GetAtt": [
-                    "SesDomain",
-                    "DkimDNSTokenValue1"
-                  ]
-                },
-                "\""
-              ] 
+          { "Fn::GetAtt": [
+              "SesDomain",
+              "DkimDNSTokenValue1"
             ] 
           }
         ]
@@ -127,19 +117,9 @@
           ]
         },
         "ResourceRecords": [
-          { "Fn::Join": 
-            [ 
-              "", 
-              [
-                "\"",
-                {
-                  "Fn::GetAtt": [
-                    "SesDomain",
-                    "DkimDNSTokenValue2"
-                  ]
-                },
-                "\""
-              ] 
+          { "Fn::GetAtt": [
+              "SesDomain",
+              "DkimDNSTokenValue2"
             ] 
           }
         ]
@@ -160,19 +140,9 @@
           ]
         },
         "ResourceRecords": [
-          { "Fn::Join": 
-            [ 
-              "", 
-              [
-                "\"",
-                {
-                  "Fn::GetAtt": [
-                    "SesDomain",
-                    "DkimDNSTokenValue3"
-                  ]
-                },
-                "\""
-              ] 
+          { "Fn::GetAtt": [
+              "SesDomain",
+              "DkimDNSTokenValue3"
             ] 
           }
         ]
