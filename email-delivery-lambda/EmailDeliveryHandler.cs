@@ -89,7 +89,7 @@ public class Function
         }
 
         await Task.WhenAll(message.BodyParts.Select(async p => {
-            using var stream = new S3UploadStream(_s3, bucket_name, $"{content_prefix}/{p.ContentType.MediaSubtype}");
+            using var stream = new S3UploadStream(_s3, bucket_name, $"{content_prefix}/{p.ContentId}");
             await p.WriteToAsync(stream, true);
         }));
 
