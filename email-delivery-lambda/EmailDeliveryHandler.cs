@@ -79,11 +79,6 @@ public class Function
         await Console.Out.WriteLineAsync($"\nMessage-ID: {message.MessageId}");
         await Console.Out.WriteLineAsync($"\nFrom {message.From}\nTo: {string.Join(", ", message.To)}\nCc: {string.Join(", ", message.Cc)}\nBcc: {string.Join(", ", message.Bcc)}\nSubject: {message.Subject}");
 
-        await Task.WhenAll(message.BodyParts.Select(async p => {
-            using var stream = new S3UploadStream(_s3, bucket_name, $"{message_key}/{p.ContentType.MediaSubtype}");
-            await p.WriteToAsync(stream, true);
-        }));
-
         var content_prefix = message_key.ReplaceStart("inbox/", "content/");
         var text_body_key = $"{content_prefix}/_body.txt";
         var html_body_key = $"{content_prefix}/_body.html";
@@ -106,6 +101,11 @@ public class Function
             await attachment.Content.DecodeToAsync(upload);
             return attachment_key;
         }
+
+        await Task.WhenAll(message.BodyParts.Select(async p => {
+            using var stream = new S3UploadStream(_s3, bucket_name, $"{content_prefix}/{p.ContentType.MediaSubtype}");
+            await p.WriteToAsync(stream, true);
+        }));
 
         var attachments = await Task.WhenAll(message.Attachments.Cast<MimeKit.MimePart>()
             .Select(attachment => decode_attachment_to_inbox(attachment)));
