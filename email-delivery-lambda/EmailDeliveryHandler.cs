@@ -126,7 +126,7 @@ public class Function
             }
         };
 
-        await (result.ToString().CopyToStream(new S3UploadStream(_s3, meta_json_key)) ?? Task.CompletedTask);
+        await (result.ToString().CopyToStream(new S3UploadStream(_s3, bucket_name, meta_json_key)) ?? Task.CompletedTask);
 
         return result;
     }
