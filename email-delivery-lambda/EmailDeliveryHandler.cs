@@ -83,13 +83,13 @@ public class Function
         var content_prefix = message_key.ReplaceStart("inbox/", "content/");
 
         async Task<string> decode_part_as_content(MimeKit.MimePart part, int index, [CallerArgumentExpression("part")] string prefix = null!) {
-            var part_key = $"{content_prefix}/{part.ContentDisposition?.FileName ?? part.ContentId ?? $"{prefix??"part"}_{index}"}"; 
+            var part_key = $"{content_prefix}/{part.ContentDisposition?.FileName ?? part.ContentId ?? $"{prefix??"part"}_{index}.{part.ContentType.MediaType}"}"; 
             using var upload = new S3UploadStream(_s3, bucket_name, part_key);
             await part.Content.DecodeToAsync(upload);
             return part_key;
         }
 
-        var body_parts = await Task.WhenAll(message.Attachments.Cast<MimeKit.MimePart>()
+        var body_parts = await Task.WhenAll(message.BodyParts.Cast<MimeKit.MimePart>()
             .Select((body, index) => decode_part_as_content(body, index)));
 
         var attachments = await Task.WhenAll(message.Attachments.Cast<MimeKit.MimePart>()
@@ -112,6 +112,7 @@ public class Function
             [ "date" ] =  $"{message.Date.UtcDateTime:o}",
             [ "text" ] = message.TextBody,
             [ "content" ] = new JsonObject() {
+                [ "body" ] = body_parts.ToJsonArray(),
                 [ "attachments" ] = attachments.ToJsonArray()
             }
         };
@@ -125,7 +126,7 @@ public class Function
         await Console.Out.WriteLineAsync($"\nContent Uris: {string.Join("\n - ", contents.Select(c => c.uri))}.");
 
         foreach(var c in contents) {
-            result["content"]![c.label] = $"{c.uri}";
+            result["content"]![c.label] = c.uri;
         }
 
         await Task.WhenAll(contents.Select(async c => {
