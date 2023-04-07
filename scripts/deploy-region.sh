@@ -5,7 +5,7 @@ set -e
 dotnet tool install -g Amazon.Lambda.Tools
 
 # source needed for S3UploadStream and SeekableS3Stream; setup credentials in Secret Manager (see the repo readme) 
-dotnet nuget add source "https://nuget.pkg.github.com/mlhpdx/index.json" --name "github-mlhpdx" -u ${GITHUB_USERNAME} -p ${GITHUB_TOKEN}
+dotnet nuget add source "https://nuget.pkg.github.com/mlhpdx/index.json" --name "github-mlhpdx" -u ${GITHUB_USERNAME} -p ${GITHUB_TOKEN} --store-password-in-clear-text
 
 # package resources to deploy to each supported region...
 dotnet lambda package-ci --template templates/regional.template --region us-west-2 --s3-bucket ${BUCKET_NAME_PREFIX}-us-west-2 --s3-prefix ${BUCKET_KEY_PREFIX}/${CODEBUILD_RESOLVED_SOURCE_VERSION} --output-template regional-us-west-2.template.packaged --use-json
