@@ -132,6 +132,13 @@
                 }
               }
             ]
+          },
+          { 
+            "DynamoDBWritePolicy": {
+              "TableName":  { 
+                "Ref": "Table" 
+              }
+            }
           }
         ]
       }
