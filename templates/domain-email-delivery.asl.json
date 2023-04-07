@@ -50,7 +50,16 @@
       "ResultPath": "$.openai",
       "ResultSelector": {
         "summary.$": "$.ResponseBody.choices[0].message.content"
-      }
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Update Mailbox Indexes",
+          "ResultPath": "$.openai.error"
+        }
+      ]
     },
     "Merge Message and OpenAI Summary": {
       "Type": "Pass",
