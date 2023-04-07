@@ -115,6 +115,11 @@
               },
               {
                 "Effect": "Allow",
+                "Action": "execute-api:Invoke",
+                "Resource": { "Fn::Sub": "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:{OpenAiGateway.Outputs.ApiId}/v1/POST/chat/completions" }
+              },
+              {
+                "Effect": "Allow",
                 "Action": "events:PutEvent",
                 "Resource": "*",
                 "Condition": {
