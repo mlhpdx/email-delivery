@@ -130,7 +130,7 @@ public class Function
         }
 
         await Task.WhenAll(contents.Select(async c => {
-            var stream = new S3UploadStream(_s3, c.uri);
+            using var stream = new S3UploadStream(_s3, c.uri);
             await c.content.CopyToStream(stream)!;
         }));
 
