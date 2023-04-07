@@ -49,7 +49,7 @@
       "Next": "Merge Message and OpenAI Summary",
       "ResultPath": "$.openai",
       "ResultSelector": {
-        "summary.$": "$.ResponseBody.choices[0].message.content"
+        "openai.response.$": "$.ResponseBody"
       },
       "Catch": [
         {
@@ -60,6 +60,43 @@
           "ResultPath": "$.openai.error"
         }
       ]
+    },
+    "Test for Good Response": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "And": [
+            {
+              "Variable": "$.openai.response.choices",
+              "IsPresent": true
+            },
+            {
+              "Variable": "$.openai.response.choices[0]",
+              "IsPresent": true
+            },
+            {
+              "Variable": "$.openai.response.choices[0].message",
+              "IsPresent": true
+            },
+            {
+              "Variable": "$.openai.response.choices[0].message.content",
+              "IsPresent": true
+            }
+          ],
+          "Next": "Copy Summary from OpenAI Response"
+        }
+      ],
+      "Default": "Update Mailbox Indexes"
+    },
+    "Copy Summary from OpenAI Response": {
+      "Type": "Pass",
+      "Next": "Merge Message and OpenAI Summary",
+      "Parameters": {
+        "message.$": "$.message",
+        "openai": {
+          "summary.$": "$.openai.response.choices[0].message.content"
+        }
+      }
     },
     "Merge Message and OpenAI Summary": {
       "Type": "Pass",

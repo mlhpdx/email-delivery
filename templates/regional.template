@@ -103,6 +103,9 @@
           },
           "OpenAiGatewayDomain": {
             "Fn::Sub": "${OpenAiGateway.Outputs.EndpointDomain}"
+          },
+          "TableName": {
+            "Ref": "Table"
           }
         },
         "Policies": [
