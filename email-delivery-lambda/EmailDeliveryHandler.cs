@@ -89,8 +89,8 @@ public class Function
         await Console.Out.WriteLineAsync($"\nContent keys: {text_body_key}, {html_body_key}, {meta_json_key}.");
 
         await Task.WhenAll(new[] {
-            message.TextBody?.CopyToStream(new S3UploadStream(_s3, text_body_key)) ?? Task.CompletedTask,
-            message.HtmlBody?.CopyToStream(new S3UploadStream(_s3, html_body_key)) ?? Task.CompletedTask,
+            message.TextBody?.CopyToStream(new S3UploadStream(_s3, bucket_name, text_body_key)) ?? Task.CompletedTask,
+            message.HtmlBody?.CopyToStream(new S3UploadStream(_s3, bucket_name, html_body_key)) ?? Task.CompletedTask,
         });
 
         async Task<string> decode_attachment_to_inbox(MimeKit.MimePart attachment) {
