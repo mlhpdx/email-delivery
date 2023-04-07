@@ -84,8 +84,9 @@ public class Function
 
         async Task<string> decode_part_as_content(MimeKit.MimePart part, int index, [CallerArgumentExpression("part")] string prefix = null!) {
             var part_key = $"{content_prefix}/{part.ContentDisposition?.FileName ?? part.ContentId ?? $"{prefix??"part"}_{index}.{part.ContentType.MediaType}"}"; 
-            using var upload = new S3UploadStream(_s3, bucket_name, part_key);
-            await part.Content.DecodeToAsync(upload);
+            using (var upload = new S3UploadStream(_s3, bucket_name, part_key)) {
+                await part.Content.DecodeToAsync(upload);
+            }
             return part_key;
         }
 
@@ -120,7 +121,7 @@ public class Function
         var contents = new[] {
             new { label = "text", content = message.TextBody, uri = $"s3://{bucket_name}/{content_prefix}/_body.txt" },
             new { label = "html", content = message.HtmlBody, uri = $"s3://{bucket_name}/{content_prefix}/_body.html"},
-            new { label = "meta.json", content = "", uri = $"s3://{bucket_name}/{content_prefix}/_meta.json"}
+            new { label = "meta.json", content = result.ToString(), uri = $"s3://{bucket_name}/{content_prefix}/_meta.json"}
         }.Where(c => c.content != null);
 
         await Console.Out.WriteLineAsync($"\nContent Uris: {string.Join("\n - ", contents.Select(c => c.uri))}.");
@@ -130,8 +131,9 @@ public class Function
         }
 
         await Task.WhenAll(contents.Select(async c => {
-            using var stream = new S3UploadStream(_s3, c.uri);
-            await c.content.CopyToStream(stream)!;
+            using (var stream = new S3UploadStream(_s3, c.uri)) {
+                await c.content.CopyToStream(stream)!;
+            }
         }));
 
         return result;
