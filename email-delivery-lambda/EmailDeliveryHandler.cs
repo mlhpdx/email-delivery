@@ -88,9 +88,13 @@ public class Function
 
         await Console.Out.WriteLineAsync($"\nContent keys: {text_body_key}, {html_body_key}, {meta_json_key}.");
 
+        using var text_body_stream = new S3UploadStream(_s3, bucket_name, text_body_key);
+        using var html_body_stream = new S3UploadStream(_s3, bucket_name, html_body_key);
+        using var meta_json_stream = new S3UploadStream(_s3, bucket_name, meta_json_key);
+
         await Task.WhenAll(new[] {
-            message.TextBody?.CopyToStream(new S3UploadStream(_s3, bucket_name, text_body_key)) ?? Task.CompletedTask,
-            message.HtmlBody?.CopyToStream(new S3UploadStream(_s3, bucket_name, html_body_key)) ?? Task.CompletedTask,
+            message.TextBody?.CopyToStream(text_body_stream) ?? Task.CompletedTask,
+            message.HtmlBody?.CopyToStream(html_body_stream) ?? Task.CompletedTask,
         });
 
         async Task<string> decode_attachment_to_inbox(MimeKit.MimePart attachment) {
@@ -126,7 +130,7 @@ public class Function
             }
         };
 
-        await (result.ToString().CopyToStream(new S3UploadStream(_s3, bucket_name, meta_json_key)) ?? Task.CompletedTask);
+        await (result.ToString().CopyToStream(meta_json_stream) ?? Task.CompletedTask);
 
         return result;
     }
