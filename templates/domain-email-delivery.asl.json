@@ -132,7 +132,7 @@
                   "S.$": "States.Format('{}|{}',$.recipient,States.ArrayGetItem(States.StringSplit($.message.date,'T'),0))"
                 },
                 "Flags": {
-                  "SS": [ ]
+                  "SS": [ "Inbox" ]
                 }
               }
             },
