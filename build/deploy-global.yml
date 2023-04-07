@@ -5,6 +5,7 @@ env:
   parameter-store: 
     BUCKET_NAME_PREFIX: /development/build/BUCKET_NAME_PREFIX 
     BUCKET_KEY_PREFIX: /development/build/BUCKET_KEY_PREFIX
+    DOMAIN_NAMES: /config/prod/email-delivery/DOMAIN_NAMES
 
 phases:
   build:

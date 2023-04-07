@@ -46,10 +46,56 @@
         },
         "AuthType": "IAM_ROLE"
       },
-      "Next": "Merge Message and OpenAI Summary",
+      "Next": "Test for Good Response",
       "ResultPath": "$.openai",
       "ResultSelector": {
-        "summary.$": "$.ResponseBody.choices[0].message.content"
+        "openai.response.$": "$.ResponseBody"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Update Mailbox Indexes",
+          "ResultPath": "$.openai.error"
+        }
+      ]
+    },
+    "Test for Good Response": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "And": [
+            {
+              "Variable": "$.openai.response.choices",
+              "IsPresent": true
+            },
+            {
+              "Variable": "$.openai.response.choices[0]",
+              "IsPresent": true
+            },
+            {
+              "Variable": "$.openai.response.choices[0].message",
+              "IsPresent": true
+            },
+            {
+              "Variable": "$.openai.response.choices[0].message.content",
+              "IsPresent": true
+            }
+          ],
+          "Next": "Copy Summary from OpenAI Response"
+        }
+      ],
+      "Default": "Update Mailbox Indexes"
+    },
+    "Copy Summary from OpenAI Response": {
+      "Type": "Pass",
+      "Next": "Merge Message and OpenAI Summary",
+      "Parameters": {
+        "message.$": "$.message",
+        "openai": {
+          "summary.$": "$.openai.response.choices[0].message.content"
+        }
       }
     },
     "Merge Message and OpenAI Summary": {
@@ -84,7 +130,16 @@
                 },
                 "GSI1SK": {
                   "S.$": "States.Format('{}|{}',$.recipient,States.ArrayGetItem(States.StringSplit($.message.date,'T'),0))"
-                }
+                },
+                "Date": {
+                  "S.$": "$.message.date"
+                },
+                "Flags": {
+                  "SS": [ "Inbox" ]
+                },
+                "PayloadUri": {
+                  "S.$": "$.message.payload_uri"
+                } 
               }
             },
             "End": true

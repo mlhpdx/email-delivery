@@ -132,6 +132,12 @@
     }
   },
   "Outputs": {
+    "ApiId": {
+      "Description": "API Gateway Id",
+      "Value": {
+        "Fn::Sub":"${GatewayToOpenAI}"
+      }
+    },
     "EndpointDomain": {
       "Description": "OpenAI Gateway Domain",
       "Value": {

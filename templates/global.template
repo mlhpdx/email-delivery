@@ -1,15 +1,14 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Transform": [
+    "ForEach",
     "AWS::Serverless-2016-10-31"
   ],
   "Description": "Setup SES email receiving with delivery to mailboxes in S3 and extaction of email attachments.",
   "Parameters": {
-    "DomainName1": {
-      "Type": "String"
-    },
-    "DomainName2": {
-      "Type": "String"
+    "DomainNames": {
+      "Type": "CommaDelimitedList",
+      "Default": "foo.com, bar.com"
     }
   },
   "Resources": {
@@ -17,6 +16,10 @@
       "Type": "AWS::DynamoDB::GlobalTable",
       "Properties": {
         "BillingMode": "PAY_PER_REQUEST",
+        "TimeToLiveSpecification": {
+          "AttributeName" : "TTL",
+          "Enabled" : true
+        },
         "AttributeDefinitions": [
           {
             "AttributeName": "PK",
@@ -89,37 +92,31 @@
       }
     },
 
-    "SpfRecordSet1": {
+    "SpfRecordSet": {
       "Type": "AWS::Route53::RecordSet",
       "Properties": {
-        "HostedZoneName": {
-          "Fn::Sub": "${DomainName1}."
-        },
+        "HostedZoneName": "%v.",
         "Type": "TXT",
         "TTL": "300",
-        "Name": {
-          "Fn::Sub": "email.${DomainName1}"
-        },
+        "Name": "email.%v",
         "ResourceRecords": [
           "\"v=spf1 include:amazonses.com ~all\""
         ]
-      }
+      },
+      "ForEach": "DomainNames"
     },
-    "SpfRecordSet2": {
+    "DmarcRecordSet": {
       "Type": "AWS::Route53::RecordSet",
       "Properties": {
-        "HostedZoneName": {
-          "Fn::Sub": "${DomainName2}."
-        },
+        "HostedZoneName": "%v.",
         "Type": "TXT",
         "TTL": "300",
-        "Name": {
-          "Fn::Sub": "email.${DomainName2}"
-        },
+        "Name": "_DMARC.%v",
         "ResourceRecords": [
-          "\"v=spf1 include:amazonses.com ~all\""
+          "\"v=DMARC1; p=none; rua=mailto:dmarc@%v; ruf=mailto:dmarc@%v; fo=1\""
         ]
-      }
+      },
+      "ForEach": "DomainNames"
     },
 
     "EbRole": {

@@ -1,15 +1,14 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Transform": [
+    "ForEach",
     "AWS::Serverless-2016-10-31"
   ],
   "Description": "Setup SES email receiving with delivery to mailboxes in S3 and extaction of email attachments.",
   "Parameters": {
-    "DomainName1": {
-      "Type": "String"
-    },
-    "DomainName2": {
-      "Type": "String"
+    "DomainNames": {
+      "Type": "CommaDelimitedList",
+      "Default": "foo.com, bar.com"
     },
     "EventBridgeRoleArn": {
       "Type": "String"
@@ -104,6 +103,9 @@
           },
           "OpenAiGatewayDomain": {
             "Fn::Sub": "${OpenAiGateway.Outputs.EndpointDomain}"
+          },
+          "TableName": {
+            "Ref": "Table"
           }
         },
         "Policies": [
@@ -116,6 +118,15 @@
               },
               {
                 "Effect": "Allow",
+                "Action": "events:PutEvents",
+                "Resource": { "Fn::Sub": "arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/default" }
+              },              {
+                "Effect": "Allow",
+                "Action": "execute-api:Invoke",
+                "Resource": { "Fn::Sub": "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${OpenAiGateway.Outputs.ApiId}/v1/POST/chat/completions" }
+              },
+              {
+                "Effect": "Allow",
                 "Action": "events:PutEvent",
                 "Resource": "*",
                 "Condition": {
@@ -125,6 +136,13 @@
                 }
               }
             ]
+          },
+          { 
+            "DynamoDBWritePolicy": {
+              "TableName":  { 
+                "Ref": "Table" 
+              }
+            }
           }
         ]
       }
@@ -200,13 +218,11 @@
       }
     },
 
-    "Domain1": {
+    "Domain": {
       "Type": "AWS::Serverless::Application",
       "Properties": {
         "Parameters": {
-          "DomainName": {
-            "Ref": "DomainName1"
-          },
+          "DomainName": "%v",
           "BucketName": {
             "Ref": "Bucket"
           },
@@ -216,25 +232,8 @@
         },
         "Location": "domain-email-delivery.template",
         "Tags": { "Name": { "Fn::Sub": "${AWS::StackName}" } }
-      }
-    },
-    "Domain2": {
-      "Type": "AWS::Serverless::Application",
-      "Properties": {
-        "Parameters": {
-          "DomainName": {
-            "Ref": "DomainName2"
-          },
-          "BucketName": {
-            "Ref": "Bucket"
-          },
-          "SesRuleSetName": {
-            "Ref": "SesRuleSet"
-          }
-        },
-        "Location": "domain-email-delivery.template",
-        "Tags": { "Name": { "Fn::Sub": "${AWS::StackName}" } }
-      }
-    }      
+      },
+      "ForEach": "DomainNames"
+    }
   }
 }

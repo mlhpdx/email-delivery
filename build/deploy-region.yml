@@ -2,9 +2,13 @@ version: 0.2
 
 env:
   shell: bash
+  secrets-manager: 
+    GITHUB_USERNAME: GITHUB_PACKAGES:USER_NAME 
+    GITHUB_TOKEN: GITHUB_PACKAGES:PASSWORD
   parameter-store: 
     BUCKET_NAME_PREFIX: /development/build/BUCKET_NAME_PREFIX 
     BUCKET_KEY_PREFIX: /development/build/BUCKET_KEY_PREFIX
+    DOMAIN_NAMES: /config/prod/email-delivery/DOMAIN_NAMES
 
 phases:
   build:

@@ -1,4 +1,5 @@
 ﻿// Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Amazon.Lambda.Core;
@@ -17,8 +18,13 @@ public static class Extensions {
         };
     }
 
-    public static string? GenerateSummary(this MimeKit.MimeMessage msg) {
-        return msg.TextBody?.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Truncate(123, "..."); // TODO: Comprehend sentiment? GPT-3 summary?
+    public static string? ReplaceStart(this string text, string existing, string replacement)
+    {
+        return text switch {
+            null => null,
+            string s when s.StartsWith(existing) => $"{replacement}{s.Substring(existing.Length)}",
+            string s => throw new ArgumentException("Provided string doesn't start with the expected value.") { Data = { ["text"] = text, ["existing"] = existing } }
+        };
     }
 
     public static JsonArray ToJsonArray(this IEnumerable<MimeKit.InternetAddress> addresses) {
@@ -27,6 +33,12 @@ public static class Extensions {
 
     public static JsonArray ToJsonArray(this IEnumerable<string> strings) {
         return new JsonArray(strings.Select(s => JsonValue.Create(s)).ToArray());
+    }
+
+    public static Task? CopyToStream(this string text, Stream stream) {
+        if (text == null) return null;
+        using var ms = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(text));
+        return ms.CopyToAsync(stream);
     }
 }
 
@@ -61,30 +73,34 @@ public class Function
 
         await Console.Out.WriteLineAsync($"\nBucket {bucket_name}\nKey: {message_key}");
 
-        using var payload = new SeekableS3Stream(_s3, bucket_name, message_key, 1024*1024, 100);
-        using var message = await MimeKit.MimeMessage.LoadAsync(payload);
+        using var raw_message_stream = new SeekableS3Stream(_s3, bucket_name, message_key, 1024*1024, 100);
+        using var message = await MimeKit.MimeMessage.LoadAsync(raw_message_stream);
         var message_id = message.MessageId ?? Path.GetFileName(message_key);
 
         await Console.Out.WriteLineAsync($"\nMessage-ID: {message.MessageId}");
         await Console.Out.WriteLineAsync($"\nFrom {message.From}\nTo: {string.Join(", ", message.To)}\nCc: {string.Join(", ", message.Cc)}\nBcc: {string.Join(", ", message.Bcc)}\nSubject: {message.Subject}");
 
-        await Task.WhenAll(message.BodyParts.Select(p => p.WriteToAsync(new S3UploadStream(_s3, bucket_name, $"{message_key}/{p.ContentType.MediaSubtype}"), true)));
+        var content_prefix = message_key.ReplaceStart("inbox/", "content/");
 
-        async Task<string> decode_attachment_to_inbox(MimeKit.MimePart attachment) {
-            var attachment_key = $"{message_key}/{attachment.ContentDisposition?.FileName ?? attachment.ContentId}"; 
-            using var upload = new S3UploadStream(_s3, bucket_name, attachment_key);
-            await attachment.Content.DecodeToAsync(upload);
-            return attachment_key;
+        async Task<string> decode_part_as_content(MimeKit.MimePart part, int index, [CallerArgumentExpression("part")] string prefix = null!) {
+            var part_key = $"{content_prefix}/{part.ContentDisposition?.FileName ?? part.ContentId ?? $"{prefix??"part"}_{index}.{part.ContentType.MediaType}"}"; 
+            using (var upload = new S3UploadStream(_s3, bucket_name, part_key)) {
+                await part.Content.DecodeToAsync(upload);
+            }
+            return part_key;
         }
 
+        var body_parts = await Task.WhenAll(message.BodyParts.Cast<MimeKit.MimePart>()
+            .Select((body, index) => decode_part_as_content(body, index)));
+
         var attachments = await Task.WhenAll(message.Attachments.Cast<MimeKit.MimePart>()
-            .Select(attachment => decode_attachment_to_inbox(attachment)));
+            .Select((attachment, index) => decode_part_as_content(attachment, index)));
 
         await Console.Out.WriteLineAsync($"\nAttachments: {string.Join(", ", attachments)}");
 
         var recipients = message.GetRecipients().Select(r => r.Address).Distinct();
 
-        return new() {
+        var result = new JsonObject() {
             [ "result" ] = "OK",
             [ "message_id"] = message_id,
             [ "payload_uri" ] = $"s3://{bucket_name}/{message_key}",
@@ -94,9 +110,32 @@ public class Function
             [ "bcc" ] = message.Bcc.ToJsonArray(),
             [ "recipients" ] = recipients.ToJsonArray(),
             [ "subject" ] = message.Subject,
-            [ "date" ] =  $"{message.Date:o}",
+            [ "date" ] =  $"{message.Date.UtcDateTime:o}",
             [ "text" ] = message.TextBody,
-            [ "attachments" ] = attachments.ToJsonArray()
+            [ "content" ] = new JsonObject() {
+                [ "body" ] = body_parts.ToJsonArray(),
+                [ "attachments" ] = attachments.ToJsonArray()
+            }
         };
+
+        var contents = new[] {
+            new { label = "text", content = message.TextBody, uri = $"s3://{bucket_name}/{content_prefix}/_body.txt" },
+            new { label = "html", content = message.HtmlBody, uri = $"s3://{bucket_name}/{content_prefix}/_body.html"},
+            new { label = "meta.json", content = result.ToString(), uri = $"s3://{bucket_name}/{content_prefix}/_meta.json"}
+        }.Where(c => c.content != null);
+
+        await Console.Out.WriteLineAsync($"\nContent Uris: {string.Join("\n - ", contents.Select(c => c.uri))}.");
+
+        foreach(var c in contents) {
+            result["content"]![c.label] = c.uri;
+        }
+
+        await Task.WhenAll(contents.Select(async c => {
+            using (var stream = new S3UploadStream(_s3, c.uri)) {
+                await c.content.CopyToStream(stream)!;
+            }
+        }));
+
+        return result;
     }
 }
