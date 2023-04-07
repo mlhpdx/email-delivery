@@ -17,8 +17,13 @@ public static class Extensions {
         };
     }
 
-    public static string? GenerateSummary(this MimeKit.MimeMessage msg) {
-        return msg.TextBody?.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Truncate(123, "..."); // TODO: Comprehend sentiment? GPT-3 summary?
+    public static string? ReplaceStart(this string text, string existing, string replacement)
+    {
+        return text switch {
+            null => null,
+            string s when s.StartsWith(existing) => $"{replacement}{s.Substring(existing.Length)}",
+            string s => throw new ArgumentException("Provided string doesn't start with the expected value.") { Data = { ["text"] = text, ["existing"] = existing } }
+        };
     }
 
     public static JsonArray ToJsonArray(this IEnumerable<MimeKit.InternetAddress> addresses) {
@@ -27,6 +32,12 @@ public static class Extensions {
 
     public static JsonArray ToJsonArray(this IEnumerable<string> strings) {
         return new JsonArray(strings.Select(s => JsonValue.Create(s)).ToArray());
+    }
+
+    public static Task? CopyToStream(this string text, Stream stream) {
+        if (text == null) return null;
+        using var ms = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(text));
+        return ms.CopyToAsync(stream);
     }
 }
 
@@ -70,8 +81,20 @@ public class Function
 
         await Task.WhenAll(message.BodyParts.Select(p => p.WriteToAsync(new S3UploadStream(_s3, bucket_name, $"{message_key}/{p.ContentType.MediaSubtype}"), true)));
 
+        var content_prefix = message_key.ReplaceStart("inbox/", "content/");
+        var text_body_key = $"{content_prefix}/_body.txt";
+        var html_body_key = $"{content_prefix}/_body.html";
+        var meta_json_key = $"{content_prefix}/_meta.json";
+
+        await Console.Out.WriteLineAsync($"\nContent keys: {text_body_key}, {html_body_key}, {meta_json_key}.");
+
+        await Task.WhenAll(new[] {
+            message.TextBody?.CopyToStream(new S3UploadStream(_s3, text_body_key)) ?? Task.CompletedTask,
+            message.HtmlBody?.CopyToStream(new S3UploadStream(_s3, html_body_key)) ?? Task.CompletedTask,
+        });
+
         async Task<string> decode_attachment_to_inbox(MimeKit.MimePart attachment) {
-            var attachment_key = $"{message_key}/{attachment.ContentDisposition?.FileName ?? attachment.ContentId}"; 
+            var attachment_key = $"{content_prefix}/{attachment.ContentDisposition?.FileName ?? attachment.ContentId}"; 
             using var upload = new S3UploadStream(_s3, bucket_name, attachment_key);
             await attachment.Content.DecodeToAsync(upload);
             return attachment_key;
@@ -84,7 +107,7 @@ public class Function
 
         var recipients = message.GetRecipients().Select(r => r.Address).Distinct();
 
-        return new() {
+        var result = new JsonObject() {
             [ "result" ] = "OK",
             [ "message_id"] = message_id,
             [ "payload_uri" ] = $"s3://{bucket_name}/{message_key}",
@@ -96,7 +119,15 @@ public class Function
             [ "subject" ] = message.Subject,
             [ "date" ] =  $"{message.Date.UtcDateTime:o}",
             [ "text" ] = message.TextBody,
-            [ "attachments" ] = attachments.ToJsonArray()
+            [ "content" ] = new JsonObject() {
+                [ "text" ] = $"s3://{bucket_name}/{text_body_key}",
+                [ "html" ] = $"s3://{bucket_name}/{html_body_key}",
+                [ "attachments" ] = attachments.ToJsonArray()
+            }
         };
+
+        await (result.ToString().CopyToStream(new S3UploadStream(_s3, meta_json_key)) ?? Task.CompletedTask);
+
+        return result;
     }
 }
