@@ -92,7 +92,7 @@
       }
     },
 
-    "SpfRecordSet%d": {
+    "SpfRecordSet": {
       "Type": "AWS::Route53::RecordSet",
       "Properties": {
         "HostedZoneName": "%v.",
@@ -105,7 +105,7 @@
       },
       "ForEach": "DomainNames"
     },
-    "DmarcRecordSet%d": {
+    "DmarcRecordSet": {
       "Type": "AWS::Route53::RecordSet",
       "Properties": {
         "HostedZoneName": "%v.",
