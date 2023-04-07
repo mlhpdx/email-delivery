@@ -94,7 +94,7 @@ public class Function
             [ "bcc" ] = message.Bcc.ToJsonArray(),
             [ "recipients" ] = recipients.ToJsonArray(),
             [ "subject" ] = message.Subject,
-            [ "date" ] =  $"{message.Date:o}",
+            [ "date" ] =  $"{message.Date.UtcDateTime:o}",
             [ "text" ] = message.TextBody,
             [ "attachments" ] = attachments.ToJsonArray()
         };
