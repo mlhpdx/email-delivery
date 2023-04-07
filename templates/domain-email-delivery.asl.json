@@ -133,7 +133,10 @@
                 },
                 "Flags": {
                   "SS": [ "Inbox" ]
-                }
+                },
+                "PayloadUri": {
+                  "S.$": "$.message.payload_uri"
+                } 
               }
             },
             "End": true
