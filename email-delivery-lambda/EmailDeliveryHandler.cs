@@ -1,4 +1,5 @@
 ﻿// Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Amazon.Lambda.Core;
@@ -81,20 +82,18 @@ public class Function
 
         var content_prefix = message_key.ReplaceStart("inbox/", "content/");
 
-        async Task<string> decode_attachment_to_inbox(MimeKit.MimePart attachment) {
-            var attachment_key = $"{content_prefix}/{attachment.ContentDisposition?.FileName ?? attachment.ContentId}"; 
-            using var upload = new S3UploadStream(_s3, bucket_name, attachment_key);
-            await attachment.Content.DecodeToAsync(upload);
-            return attachment_key;
+        async Task<string> decode_part_as_content(MimeKit.MimePart part, int index, [CallerArgumentExpression("part")] string prefix = null!) {
+            var part_key = $"{content_prefix}/{part.ContentDisposition?.FileName ?? part.ContentId ?? $"{prefix??"part"}_{index}"}"; 
+            using var upload = new S3UploadStream(_s3, bucket_name, part_key);
+            await part.Content.DecodeToAsync(upload);
+            return part_key;
         }
 
-        await Task.WhenAll(message.BodyParts.Select(async p => {
-            using var stream = new S3UploadStream(_s3, bucket_name, $"{content_prefix}/{p.ContentId}");
-            await p.WriteToAsync(stream, true);
-        }));
+        var body_parts = await Task.WhenAll(message.Attachments.Cast<MimeKit.MimePart>()
+            .Select((body, index) => decode_part_as_content(body, index)));
 
         var attachments = await Task.WhenAll(message.Attachments.Cast<MimeKit.MimePart>()
-            .Select(attachment => decode_attachment_to_inbox(attachment)));
+            .Select((attachment, index) => decode_part_as_content(attachment, index)));
 
         await Console.Out.WriteLineAsync($"\nAttachments: {string.Join(", ", attachments)}");
 
