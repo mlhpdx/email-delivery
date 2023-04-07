@@ -46,7 +46,7 @@
         },
         "AuthType": "IAM_ROLE"
       },
-      "Next": "Merge Message and OpenAI Summary",
+      "Next": "Test for Good Response",
       "ResultPath": "$.openai",
       "ResultSelector": {
         "openai.response.$": "$.ResponseBody"
