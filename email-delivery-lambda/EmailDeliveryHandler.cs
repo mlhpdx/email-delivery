@@ -72,28 +72,14 @@ public class Function
 
         await Console.Out.WriteLineAsync($"\nBucket {bucket_name}\nKey: {message_key}");
 
-        using var payload = new SeekableS3Stream(_s3, bucket_name, message_key, 1024*1024, 100);
-        using var message = await MimeKit.MimeMessage.LoadAsync(payload);
+        using var raw_message_stream = new SeekableS3Stream(_s3, bucket_name, message_key, 1024*1024, 100);
+        using var message = await MimeKit.MimeMessage.LoadAsync(raw_message_stream);
         var message_id = message.MessageId ?? Path.GetFileName(message_key);
 
         await Console.Out.WriteLineAsync($"\nMessage-ID: {message.MessageId}");
         await Console.Out.WriteLineAsync($"\nFrom {message.From}\nTo: {string.Join(", ", message.To)}\nCc: {string.Join(", ", message.Cc)}\nBcc: {string.Join(", ", message.Bcc)}\nSubject: {message.Subject}");
 
         var content_prefix = message_key.ReplaceStart("inbox/", "content/");
-        var text_body_key = $"{content_prefix}/_body.txt";
-        var html_body_key = $"{content_prefix}/_body.html";
-        var meta_json_key = $"{content_prefix}/_meta.json";
-
-        await Console.Out.WriteLineAsync($"\nContent keys: {text_body_key}, {html_body_key}, {meta_json_key}.");
-
-        using var text_body_stream = new S3UploadStream(_s3, bucket_name, text_body_key);
-        using var html_body_stream = new S3UploadStream(_s3, bucket_name, html_body_key);
-        using var meta_json_stream = new S3UploadStream(_s3, bucket_name, meta_json_key);
-
-        await Task.WhenAll(new[] {
-            message.TextBody?.CopyToStream(text_body_stream) ?? Task.CompletedTask,
-            message.HtmlBody?.CopyToStream(html_body_stream) ?? Task.CompletedTask,
-        });
 
         async Task<string> decode_attachment_to_inbox(MimeKit.MimePart attachment) {
             var attachment_key = $"{content_prefix}/{attachment.ContentDisposition?.FileName ?? attachment.ContentId}"; 
@@ -127,13 +113,26 @@ public class Function
             [ "date" ] =  $"{message.Date.UtcDateTime:o}",
             [ "text" ] = message.TextBody,
             [ "content" ] = new JsonObject() {
-                [ "text" ] = $"s3://{bucket_name}/{text_body_key}",
-                [ "html" ] = $"s3://{bucket_name}/{html_body_key}",
                 [ "attachments" ] = attachments.ToJsonArray()
             }
         };
 
-        await (result.ToString().CopyToStream(meta_json_stream) ?? Task.CompletedTask);
+        var contents = new[] {
+            new { label = "text", content = message.TextBody, uri = $"s3://{bucket_name}/{content_prefix}/_body.txt" },
+            new { label = "html", content = message.HtmlBody, uri = $"s3://{bucket_name}/{content_prefix}/_body.html"},
+            new { label = "meta.json", content = "", uri = $"s3://{bucket_name}/{content_prefix}/_meta.json"}
+        }.Where(c => c.content != null);
+
+        await Console.Out.WriteLineAsync($"\nContent Uris: {string.Join("\n - ", contents.Select(c => c.uri))}.");
+
+        foreach(var c in contents) {
+            result["content"]![c.label] = $"{c.uri}";
+        }
+
+        await Task.WhenAll(contents.Select(async c => {
+            var stream = new S3UploadStream(_s3, c.uri);
+            await c.content.CopyToStream(stream)!;
+        }));
 
         return result;
     }
