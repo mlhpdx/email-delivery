@@ -57,7 +57,7 @@ This is a work in progress serverless system for receiving email, and it already
 - Multi-region deployment and latency-based routing in Route53 ensure solid  availability.
 - The region-specific domain name list allow you to control where emails are stored for domains (e.g. keeping all email to your .uk domain in Ireland and your .com domain in the US).
 
-You don't get a UI or any kind of client, so instead of using `rmail` you're going to be automatically processing email or using `aws dynamodb query ... | aws s3api ...` commands to read that spam. 
+You don't get a UI or any kind of client, so instead of using `rmail` you're going to be automatically processing email or using `aws dynamodb query ... | aws s3api ...` commands to read that spam.
 
 Speaking of spam, for kicks this repository can use the OpenAI API to summarize the email body. To use this feature you'll need to set up an OpenAI account and add an AWS SecretsManager secret called "OPENAPI" with a key "API_TOKEN" and the value being your API token (make sure to use the replication feature to easily make it available in the three regions).  If you don't want to use this feature, just put a placeholder in for the token and it'll work just fine.
 
