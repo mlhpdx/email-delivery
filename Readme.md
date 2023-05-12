@@ -49,6 +49,9 @@ You can also deploy this solution from the command line if you have the AWS CLI 
 
 Once you run the scripts, the global resources will be created in a stack called email-delivery-global, and a stack called `email-delivery` will be ready in `us-west-1`, `us-east-2` and `eu-west-1`.
 
+## Activate SES Rule Sets
+
+After the first deployment is finished you'll need to go to each SES region and manually activate the rule sets under "Email Receiving" in the SES Console. You only need to do this once, when initially setting-up the stacks (not with each subsequent deployment).
 
 # Features
 
