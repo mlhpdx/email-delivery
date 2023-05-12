@@ -19,11 +19,11 @@ The domain names to enabled with email receiving are defined in a ParameterStore
 > for REGION in us-west-2 us-east-1 eu-west-1; do aws ssm put-parameter --name "/config/prod/email-delivery/DOMAIN_NAMES" --value $DOMAIN_NAMES --type String --region $REGION; done  
 ```
 
-## Hosted Zones
+## Hosted Zones (if not already created)
 Before the deployment, you'll need hosted zones in Route 53 for the domain names you're using. Create them if you don't already have them. Default, empty zones are fine.
 
 ```bash
-> for DOMAIN in $(echo $DOMAIN_NAMES | tr "," " "); do aws ssm create-hosted-zone --name $DOMAIN --caller-reference "create for email delivery"; done
+> for DOMAIN in $(echo $DOMAIN_NAMES | tr "," " "); do aws route53 create-hosted-zone --name $DOMAIN --caller-reference "create for email delivery"; done
 ```
 
 ## Bucket for Deployment
@@ -35,7 +35,7 @@ Using AWS SAM means having a bucket to hold the built artifacts before they can 
 ```
 
 ## CodeBuild (optional)
-This repository uses structured (nested) AWS SAM templates and includes buildspecs to use with CodeBuild. If you want to use this method, you'll need to set up a CodeBuild project configured for "batch" builds and point it to this repo (or your own fork). The service role for that CodeBuild project will need permissions for IAM, DDB, Step Functions, Route53, S3, and probably more. Unfortunately, this is not yet documented.
+This repository uses structured (nested) AWS SAM templates and includes buildspecs to use with CodeBuild. If you want to use this method of ci/cd, you'll need to set up a CodeBuild project configured for "batch" builds and point it to this repo (or your own fork). The service role for that CodeBuild project will need permissions for IAM, DDB, Step Functions, Route53, S3, and probably more. Unfortunately, this is not yet documented.
 
 ## Deployment Scripts
 You can also deploy this solution from the command line if you have the AWS CLI version 2 installed and appropriate credentials configured. The scripts folder contains everything you need, and is probably easier than CodeBuild if you're just "having a look". Note that the scripts assume that they'll be run from the repository root:
