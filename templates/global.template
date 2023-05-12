@@ -81,6 +81,12 @@
             "PointInTimeRecoverySpecification": {
               "PointInTimeRecoveryEnabled": true
             }
+          },
+          {
+            "Region": "us-east-1",
+            "PointInTimeRecoverySpecification": {
+              "PointInTimeRecoveryEnabled": true
+            }
           }
         ]
       }
