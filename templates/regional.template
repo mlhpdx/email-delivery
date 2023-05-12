@@ -69,6 +69,7 @@
       "Properties": {
         "Runtime": "dotnet6",
         "MemorySize": 1024,
+        "Timeout": 10,
         "Handler": "email-delivery-lambda::Cppl.EmailDelivery.Function::FunctionHandler",
         "CodeUri": "../email-delivery-lambda",
         "Environment": {
