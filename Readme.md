@@ -34,6 +34,9 @@ Using AWS SAM means having a bucket to hold the built artifacts before they can 
 > for REGION in us-west-2 us-east-1 eu-west-1; do aws s3 create-bucket --bucket $BUCKET_NAME_PREFIX-$REGION --region $REGION; done
 ```
 
+## API Gateway CloudWatch Logs Role ARN is Set
+See: https://www.chrisarmstrong.dev/posts/setting-up-api-gateway-cloudwatch-logging-for-your-aws-account
+
 ## CodeBuild (optional)
 This repository uses structured (nested) AWS SAM templates and includes buildspecs to use with CodeBuild. If you want to use this method of ci/cd, you'll need to set up a CodeBuild project configured for "batch" builds and point it to this repo (or your own fork). The service role for that CodeBuild project will need permissions for IAM, DDB, Step Functions, Route53, S3, and probably more. Unfortunately, this is not yet documented.
 
