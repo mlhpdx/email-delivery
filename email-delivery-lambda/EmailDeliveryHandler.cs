@@ -1,6 +1,5 @@
 ﻿// Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 using System.Runtime.CompilerServices;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Amazon.Lambda.Core;
 using Cppl.Utilities.AWS;
@@ -10,30 +9,25 @@ using Cppl.Utilities.AWS;
 namespace Cppl.EmailDelivery;
 
 public static class Extensions {
-    public static string? Truncate(this string? text, int length, string ellipses) {
-        return text switch {
+    public static string? Truncate(this string? text, int length, string ellipses) =>
+        text switch {
             null => null,
             string s when s.Length < length => text,
-            string s => s.Substring(0, length - ellipses.Length).TrimEnd() + ellipses
+            string s => s[..(length - ellipses.Length)].TrimEnd() + ellipses
         };
-    }
 
-    public static string? ReplaceStart(this string text, string existing, string replacement)
-    {
-        return text switch {
+    public static string? ReplaceStart(this string text, string existing, string replacement) =>
+        text switch {
             null => null,
-            string s when s.StartsWith(existing) => $"{replacement}{s.Substring(existing.Length)}",
-            string s => throw new ArgumentException("Provided string doesn't start with the expected value.") { Data = { ["text"] = text, ["existing"] = existing } }
+            string s when s.StartsWith(existing) => $"{replacement}{s[existing.Length..]}",
+            string => throw new ArgumentException("Provided string doesn't start with the expected value.") { Data = { ["text"] = text, ["existing"] = existing } }
         };
-    }
 
-    public static JsonArray ToJsonArray(this IEnumerable<MimeKit.InternetAddress> addresses) {
-        return addresses.Select(a => a.ToString()).ToJsonArray();
-    }
+    public static JsonArray ToJsonArray(this IEnumerable<MimeKit.InternetAddress> addresses) =>
+        addresses.Select(a => a.ToString()).ToJsonArray();
 
-    public static JsonArray ToJsonArray(this IEnumerable<string> strings) {
-        return new JsonArray(strings.Select(s => JsonValue.Create(s)).ToArray());
-    }
+    public static JsonArray ToJsonArray(this IEnumerable<string> strings) =>
+         new(strings.Select(s => JsonValue.Create(s)).ToArray());
 
     public static Task? CopyToStream(this string text, Stream stream) {
         if (text == null) return null;
