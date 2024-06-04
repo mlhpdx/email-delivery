@@ -15,5 +15,5 @@ aws cloudformation deploy \
     --no-fail-on-empty-changeset \
     --parameter-overrides \
         DomainNames="${DOMAIN_NAMES}" \
-    --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND 
+    --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
     --region us-west-2
