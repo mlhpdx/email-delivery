@@ -36,14 +36,13 @@ public static class Extensions {
     }
 }
 
-public class Function
+public class Function(Amazon.S3.IAmazonS3 s3)
 {
-    static Function() { }
+    static Function() { /* start X-Ray here */ }
     
-    public Function() : this(new Amazon.S3.AmazonS3Client()) { /* start X-Ray here */ }
-    public Function(Amazon.S3.IAmazonS3 s3) { _s3 = s3; }
+    public Function() : this(new Amazon.S3.AmazonS3Client()) { }
 
-    Amazon.S3.IAmazonS3 _s3;
+    readonly Amazon.S3.IAmazonS3 _s3 = s3;
 
     public async Task<JsonObject> FunctionHandler(JsonObject request, ILambdaContext context)
     {

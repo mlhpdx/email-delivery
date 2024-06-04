@@ -67,9 +67,9 @@
     "DeliveryLambda": {
       "Type": "AWS::Serverless::Function",
       "Properties": {
-        "Runtime": "dotnet6",
+        "Runtime": "dotnet8",
         "MemorySize": 1024,
-        "Timeout": 10,
+        "Timeout": 12,
         "Handler": "email-delivery-lambda::Cppl.EmailDelivery.Function::FunctionHandler",
         "CodeUri": "../email-delivery-lambda",
         "Environment": {
