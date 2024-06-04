@@ -8,6 +8,9 @@ env:
     DOMAIN_NAMES: /config/prod/email-delivery/DOMAIN_NAMES
 
 phases:
+  install: 
+    runtime-versions:
+      dotnet: 8.0
   build:
     on-failure: ABORT
     commands:
