@@ -16,13 +16,7 @@ export GLOBAL_TABLE_NAME=$(aws cloudformation describe-stacks \
 # package resources and deploy to each supported region...
 sam build --template-file templates/regional.template
 
-# if not otherwise specified, the three default regions are used
-if [[ -n "$DEPLOY_TO_REGIONS" ]]; then
-  export DEPLOY_TO_REGIONS="us-west-2 us-east-1 eu-west-1"
-  exit 1
-fi
-
-for DEPLOY_REGION in $DEPLOY_TO_REGIONS; do
+for DEPLOY_REGION in ${DEPLOY_TO_REGIONS:-us-west-2 us-east-1 eu-west-1}; do
   sam deploy \
     --s3-bucket ${BUCKET_NAME_PREFIX}-${DEPLOY_REGION} \
     --s3-prefix ${BUCKET_KEY_PREFIX}/email-service/${CODEBUILD_RESOLVED_SOURCE_VERSION} \
