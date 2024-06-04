@@ -17,7 +17,7 @@ export GLOBAL_TABLE_NAME=$(aws cloudformation describe-stacks \
 sam build --template-file templates/regional.template
 
 # if not otherwise specified, the three default regions are used
-if [ [ -n ${DEPLOY_TO_REGIONS} ] ]; then
+if [[ -n "$DEPLOY_TO_REGIONS" ]]; then
   export DEPLOY_TO_REGIONS="us-west-2 us-east-1 eu-west-1"
   exit 1
 fi
