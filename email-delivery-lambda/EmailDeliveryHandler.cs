@@ -124,9 +124,8 @@ public class Function(Amazon.S3.IAmazonS3 s3)
         }
 
         await Task.WhenAll(contents.Select(async c => {
-            using (var stream = new S3UploadStream(_s3, c.uri)) {
-                await c.content.CopyToStream(stream)!;
-            }
+            using var stream = new S3UploadStream(_s3, c.uri);
+            await c.content.CopyToStream(stream)!;
         }));
 
         return result;
