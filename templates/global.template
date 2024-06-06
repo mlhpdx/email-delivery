@@ -8,11 +8,11 @@
   "Parameters": {
     "DomainNames": {
       "Type": "CommaDelimitedList",
-      "Default": "foo.com, bar.com"
+      "Default": "foo.com,bar.com"
     },
     "ReplicaRegions": {
       "Type": "CommaDelimitedList",
-      "Default": "eu-west-1, us-east-1, ap-southeast-2, ap-northeast-1"
+      "Default": "us-west-2,eu-west-1,us-east-1, ap-northeast-1"
     }
   },
   "Resources": {
