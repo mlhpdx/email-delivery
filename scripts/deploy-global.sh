@@ -1,5 +1,5 @@
 # exit when any command fails
-set -e
+set -e -x
 
 # global resources deploy only in us-west-2!
 aws cloudformation package \

@@ -1,5 +1,5 @@
 # exit when any command fails
-set -e
+set -e -x
 
 #cfn-lint --non-zero-exit-code error templates/global.template
 #cfn-lint --non-zero-exit-code error templates/regional.template

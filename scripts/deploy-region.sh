@@ -1,5 +1,5 @@
 # exit when any command fails
-set -e
+set -e -x
 
 #get global stack output for EB_ROLE_ARN from EventBridgeRoleArn (in us-west-2)
 export EB_ROLE_ARN=$(aws cloudformation describe-stacks \
