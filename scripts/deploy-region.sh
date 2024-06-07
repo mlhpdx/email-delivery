@@ -25,7 +25,7 @@ for DEPLOY_REGION in ${DEPLOY_TO_REGIONS:-us-west-2 us-east-1 eu-west-1}; do
       "DomainNames=${DOMAIN_NAMES}" \
       EventBridgeRoleArn=${EB_ROLE_ARN} \
       Table=${GLOBAL_TABLE_NAME} \
-      ReplicaRegions=${REPLICA_REGIONS:-us-east-1 eu-west-1} \
+      ReplicaRegions=${REPLICA_REGIONS:-us-west-2,us-east-1,eu-west-1} \
     --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
     --region ${DEPLOY_REGION}
 done
