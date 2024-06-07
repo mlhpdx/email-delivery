@@ -12,7 +12,7 @@
     },
     "ReplicaRegions": {
       "Type": "CommaDelimitedList",
-      "Default": "us-west-2,eu-west-1,us-east-1, ap-northeast-1"
+      "Default": "us-west-2,eu-west-1,us-east-1"
     }
   },
   "Resources": {
