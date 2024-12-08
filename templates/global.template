@@ -106,7 +106,7 @@
         "TTL": "300",
         "Name": "_DMARC.%v",
         "ResourceRecords": [
-          "\"v=DMARC1; p=quarantine; rua=mailto:dmarc@%v; ruf=mailto:dmarc@%v; fo=1\""
+          "\"v=DMARC1; p=quarantine; pct=100; rua=mailto:dmarc@%v; ruf=mailto:dmarc@%v; fo=1\""
         ]
       },
       "ForEach": "DomainNames"
