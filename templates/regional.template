@@ -51,6 +51,25 @@
                   "AWS:SourceArn": { "Fn::Sub": "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:receipt-rule-set/*" }
                 }
               }
+            },
+            {
+              "Sid": "SslIsRequired",
+              "Action": "s3:*",
+              "Effect": "Deny",
+              "Resource": [
+                {
+                  "Fn::Sub": "${Bucket.Arn}"
+                },
+                {
+                  "Fn::Sub": "${Bucket.Arn}/*"
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false"
+                }
+              },
+              "Principal": "*"
             }
           ]
         }
