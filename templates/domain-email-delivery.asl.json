@@ -137,6 +137,9 @@
                 "Flags": {
                   "SS": [ "Inbox" ]
                 },
+                "DeliveryRegion": {
+                  "S.$": "$.message.delivery_region"
+                },
                 "PayloadUri": {
                   "S.$": "$.message.payload_uri"
                 } 

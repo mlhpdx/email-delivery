@@ -97,6 +97,7 @@ public class Function(Amazon.S3.IAmazonS3 s3)
             [ "result" ] = "OK",
             [ "message_id"] = message_id,
             [ "payload_uri" ] = $"s3://{bucket_name}/{message_key}",
+            [ "delivery_region" ] = Environment.GetEnvironmentVariable("AWS_REGION"),
             [ "from" ] = $"{message.From}",
             [ "to" ] = message.To.ToJsonArray(),
             [ "cc" ] = message.Cc.ToJsonArray(),
