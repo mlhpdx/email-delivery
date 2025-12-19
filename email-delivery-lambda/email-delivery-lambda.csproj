@@ -8,14 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Amazon.Lambda.Core" Version="2.5.0" />
+    <PackageReference Include="Amazon.Lambda.Core" Version="2.8.0" />
     <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" Version="2.4.4" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.410.1" />
-    <PackageReference Include="AWSSDK.XRay" Version="3.7.401.3" />
-    <PackageReference Include="AWSXRayRecorder.Handlers.AwsSdk" Version="2.13.0" />
-    <PackageReference Include="AWSXRayRecorder.Handlers.System.Net" Version="2.12.0" />
-    <PackageReference Include="MimeKit" Version="4.8.0" />
-    <PackageReference Include="S3UploadStream" Version="1.1.0" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.15.1" />
+    <PackageReference Include="AWSSDK.XRay" Version="4.0.3.8" />
+    <PackageReference Include="AWSXRayRecorder.Handlers.AwsSdk" Version="2.14.0" />
+    <PackageReference Include="AWSXRayRecorder.Handlers.System.Net" Version="2.13.0" />
+    <PackageReference Include="MimeKit" Version="4.14.0" />
+    <PackageReference Include="S3UploadStream" Version="1.2.0" />
     <PackageReference Include="SeekableS3Stream" Version="1.0.2" />
   </ItemGroup>
 
