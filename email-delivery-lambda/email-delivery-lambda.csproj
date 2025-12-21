@@ -15,7 +15,7 @@
     <PackageReference Include="AWSXRayRecorder.Handlers.AwsSdk" Version="2.14.0" />
     <PackageReference Include="AWSXRayRecorder.Handlers.System.Net" Version="2.13.0" />
     <PackageReference Include="MimeKit" Version="4.14.0" />
-    <PackageReference Include="S3UploadStream" Version="1.2.1" />
+    <PackageReference Include="S3UploadStream" Version="1.2.2" />
     <PackageReference Include="SeekableS3Stream" Version="1.0.3" />
   </ItemGroup>
 
