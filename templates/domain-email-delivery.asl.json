@@ -22,34 +22,37 @@
           "BackoffRate": 2
         }
       ],
-      "Next": "Get OpenAI Summary",
+      "Next": "Get Bedrock Summary",
       "ResultSelector": {
         "message.$": "$.Payload"
       }
     },
-    "Get OpenAI Summary": {
+    "Get Bedrock Summary": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::apigateway:invoke",
+      "Resource": "arn:aws:states:::bedrock:invokeModel",
       "Parameters": {
-        "ApiEndpoint": "${OpenAiGatewayDomain}",
-        "Method": "POST",
-        "Path": "/v1/chat/completions",
-        "RequestBody": {
-          "model": "gpt-3.5-turbo",
+        "ModelId": "${ModelId}",
+        "Body": {
           "messages": [
             {
               "role": "user",
-              "content.$": "States.Format('What is the goal of the sender of this email in 12 words or less? \n{}', $.message.text)"
+              "content": [
+                {
+                  "text.$": "States.Format('What is the goal of the sender of this email in 12 words or less? \n{}', $.message.text)"
+                }
+              ]
             }
           ],
-          "temperature": 0.7
-        },
-        "AuthType": "IAM_ROLE"
+          "inferenceConfig": {
+            "maxTokens": 50,
+            "temperature": 0.7
+          }
+        }
       },
       "Next": "Test for Good Response",
-      "ResultPath": "$.openai",
+      "ResultPath": "$.bedrock",
       "ResultSelector": {
-        "openai.response.$": "$.ResponseBody"
+        "response.$": "$.Body"
       },
       "Catch": [
         {
@@ -57,7 +60,7 @@
             "States.ALL"
           ],
           "Next": "Update Mailbox Indexes",
-          "ResultPath": "$.openai.error"
+          "ResultPath": "$.bedrock.error"
         }
       ]
     },
@@ -67,42 +70,42 @@
         {
           "And": [
             {
-              "Variable": "$.openai.response.choices",
+              "Variable": "$.bedrock.response.output",
               "IsPresent": true
             },
             {
-              "Variable": "$.openai.response.choices[0]",
+              "Variable": "$.bedrock.response.output.message",
               "IsPresent": true
             },
             {
-              "Variable": "$.openai.response.choices[0].message",
+              "Variable": "$.bedrock.response.output.message.content[0]",
               "IsPresent": true
             },
             {
-              "Variable": "$.openai.response.choices[0].message.content",
+              "Variable": "$.bedrock.response.output.message.content[0].text",
               "IsPresent": true
             }
           ],
-          "Next": "Copy Summary from OpenAI Response"
+          "Next": "Copy Summary from Bedrock Response"
         }
       ],
       "Default": "Update Mailbox Indexes"
     },
-    "Copy Summary from OpenAI Response": {
+    "Copy Summary from Bedrock Response": {
       "Type": "Pass",
-      "Next": "Merge Message and OpenAI Summary",
+      "Next": "Merge Message and Bedrock Summary",
       "Parameters": {
         "message.$": "$.message",
-        "openai": {
-          "summary.$": "$.openai.response.choices[0].message.content"
+        "bedrock": {
+          "summary.$": "$.bedrock.response.output.message.content[0].text"
         }
       }
     },
-    "Merge Message and OpenAI Summary": {
+    "Merge Message and Bedrock Summary": {
       "Type": "Pass",
       "Next": "Update Mailbox Indexes",
       "Parameters": {
-        "message.$": "States.JsonMerge($.message,$.openai,false)"
+        "message.$": "States.JsonMerge($.message,$.bedrock,false)"
       }
     },
     "Update Mailbox Indexes": {
@@ -135,17 +138,46 @@
                   "S.$": "$.message.date"
                 },
                 "Flags": {
-                  "SS": [ "Inbox" ]
+                  "SS": [
+                    "Inbox"
+                  ]
                 },
                 "DeliveryRegion": {
                   "S.$": "$.message.delivery_region"
                 },
                 "PayloadUri": {
                   "S.$": "$.message.payload_uri"
-                } 
+                }
               }
             },
-            "End": true
+            "Next": "Increment Daily Count",
+            "ResultPath": null
+          },
+          "Increment Daily Count": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:updateItem",
+            "Parameters": {
+              "TableName": "${TableName}",
+              "Key": {
+                "PK": {
+                  "S.$": "States.Format('MSG_CNT|{}', States.ArrayGetItem(States.StringSplit($.message.date,'T'),0))"
+                },
+                "SK": {
+                  "S.$": "$.recipient"
+                }
+              },
+              "UpdateExpression": "ADD #cnt :one",
+              "ExpressionAttributeNames": {
+                "#cnt": "count"
+              },
+              "ExpressionAttributeValues": {
+                ":one": {
+                  "N": "1"
+                }
+              }
+            },
+            "End": true,
+            "ResultPath": null
           }
         }
       },

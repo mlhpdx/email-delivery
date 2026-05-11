@@ -17,7 +17,7 @@ This is a work in progress serverless system for receiving email, and it already
 - Multi-region deployment and latency-based routing in Route53 ensure industrial-strength availability.
 - Optionally, the region-specific domain name list allows you to control where emails are stored (e.g. keeping all email to your .uk domain in Ireland and your .com domain in the US).
 
-Speaking of spam, for kicks this repository can use the OpenAI API to summarize the email body. To use this feature you'll need to set up an OpenAI account and add an AWS SecretsManager secret called "OPENAPI" with a key "API_TOKEN" and the value being your API token (make sure to use the replication feature to easily make it available in the three regions).  If you don't want to use this feature, just put a placeholder in for the token and it'll work just fine.
+To help deal with spam this system uses the Nova model on AWS Bedrock to summarize email bodies and adds the response to the generated events. It doesn't suppress or tag emails automatically, but if you want that the summary makes it  much easier and it can be added using an EventBridge rule.
 
 # Caveats
 

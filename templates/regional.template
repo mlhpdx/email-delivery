@@ -15,6 +15,10 @@
     },
     "Table": {
       "Type": "String"
+    },
+    "BedrockBaseModelId": {
+      "Type": "String",
+      "Default": "amazon.nova-micro-v1:0"
     }
   },
   "Resources": {
@@ -121,9 +125,7 @@
           "DeliveryLambdaArn": {
             "Fn::Sub": "${DeliveryLambda.Arn}"
           },
-          "OpenAiGatewayDomain": {
-            "Fn::Sub": "${OpenAiGateway.Outputs.EndpointDomain}"
-          },
+          "ModelId": { "Fn::Sub": ["${Prefix}.${ModelId}", { "Prefix": { "Fn::Select": [ 0, { "Fn::Split": [ "-", { "Ref": "AWS::Region" } ] } ] }, "ModelId": { "Ref": "BedrockBaseModelId" } }] },
           "TableName": {
             "Ref": "Table"
           }
@@ -140,10 +142,14 @@
                 "Effect": "Allow",
                 "Action": "events:PutEvents",
                 "Resource": { "Fn::Sub": "arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/default" }
-              },              {
+              },
+              {
                 "Effect": "Allow",
-                "Action": "execute-api:Invoke",
-                "Resource": { "Fn::Sub": "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${OpenAiGateway.Outputs.ApiId}/v1/POST/chat/completions" }
+                "Action": "bedrock:InvokeModel",
+                "Resource": [
+                  { "Fn::Sub": [ "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/${Prefix}.${ModelId}", { "Prefix": { "Fn::Select": [ 0, { "Fn::Split": [ "-", { "Ref": "AWS::Region" } ] } ] }, "ModelId": { "Ref": "BedrockBaseModelId" } } ] },
+                  { "Fn::Sub": "arn:aws:bedrock:*::foundation-model/${BedrockBaseModelId}" }
+                ]
               },
               {
                 "Effect": "Allow",
@@ -227,14 +233,6 @@
             }
           }
         }
-      }
-    },
-
-    "OpenAiGateway": {
-      "Type": "AWS::Serverless::Application",
-      "Properties": {
-        "Location": "openai-gateway.template",
-        "Tags": { "Name": { "Fn::Sub": "${AWS::StackName}" } }
       }
     },
 
