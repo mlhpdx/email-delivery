@@ -1,7 +1,13 @@
 # exit when any command fails
 set -e -x
 
-#get global stack outputs from file written by deploy-global.sh
+#get global stack outputs
+aws cloudformation describe-stacks \
+  --stack-name email-delivery-global \
+  --region us-west-2 \
+  --query "Stacks[0].Outputs" \
+  --output json > email-delivery-global.outputs.json
+  
 OUTPUTS_FILE="${OUTPUTS_FILE:-email-delivery-global.outputs.json}"
 export EB_ROLE_ARN=$(jq -r '.[] | select(.OutputKey=="EventBridgeRoleArn") | .OutputValue' "$OUTPUTS_FILE")
 export GLOBAL_TABLE_NAME=$(jq -r '.[] | select(.OutputKey=="GlobalTableName") | .OutputValue' "$OUTPUTS_FILE")
