@@ -18,3 +18,9 @@ aws cloudformation deploy \
     ReplicaRegions=${REPLICA_REGIONS:-us-west-2,eu-west-1,us-east-1} \
   --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
   --region us-west-2
+
+aws cloudformation describe-stacks \
+  --stack-name email-delivery-global \
+  --region us-west-2 \
+  --query "Stacks[0].Outputs" \
+  --output json > email-delivery-global.outputs.json

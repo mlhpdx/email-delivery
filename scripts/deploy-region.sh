@@ -1,17 +1,10 @@
 # exit when any command fails
 set -e -x
 
-#get global stack output for EB_ROLE_ARN from EventBridgeRoleArn (in us-west-2)
-export EB_ROLE_ARN=$(aws cloudformation describe-stacks \
-  --stack-name email-delivery-global \
-  --region us-west-2 \
-  --query "Stacks[0].Outputs[?OutputKey=='EventBridgeRoleArn'].OutputValue" \
-  --output text)
-export GLOBAL_TABLE_NAME=$(aws cloudformation describe-stacks \
-  --stack-name email-delivery-global \
-  --region us-west-2 \
-  --query "Stacks[0].Outputs[?OutputKey=='GlobalTableName'].OutputValue" \
-  --output text)
+#get global stack outputs from file written by deploy-global.sh
+OUTPUTS_FILE="${OUTPUTS_FILE:-email-delivery-global.outputs.json}"
+export EB_ROLE_ARN=$(jq -r '.[] | select(.OutputKey=="EventBridgeRoleArn") | .OutputValue' "$OUTPUTS_FILE")
+export GLOBAL_TABLE_NAME=$(jq -r '.[] | select(.OutputKey=="GlobalTableName") | .OutputValue' "$OUTPUTS_FILE")
 
 # package resources and deploy to each supported region...
 sam build --template-file templates/regional.template
@@ -28,4 +21,4 @@ for DEPLOY_REGION in ${DEPLOY_TO_REGIONS:-us-west-2 us-east-1 eu-west-1}; do
       ReplicaRegions=${REPLICA_REGIONS:-us-west-2,us-east-1,eu-west-1} \
     --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
     --region ${DEPLOY_REGION}
-done
+done 
