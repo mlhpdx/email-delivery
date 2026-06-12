@@ -10,7 +10,7 @@ env:
 phases:
   install: 
     runtime-versions:
-      dotnet: 8.0
+      dotnet: 10.0
   build:
     on-failure: ABORT
     commands:
