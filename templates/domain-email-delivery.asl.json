@@ -1,207 +1,207 @@
 {
-  "Comment": "Receives S3 Event when new emails are delivered by SES, parses useful fields, extracts attachments, generates an AI summary, and puts a rich event message to Event Bridge to trigger downstream processing and automation.",
-  "StartAt": "Parse Message and Decode Attachments",
-  "States": {
-    "Parse Message and Decode Attachments": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Parameters": {
-        "Payload.$": "$",
-        "FunctionName": "${DeliveryLambdaArn}"
-      },
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException",
-            "Lambda.TooManyRequestsException"
-          ],
-          "IntervalSeconds": 2,
-          "MaxAttempts": 6,
-          "BackoffRate": 2
-        }
-      ],
-      "Next": "Get Bedrock Summary",
-      "ResultSelector": {
-        "message.$": "$.Payload"
-      }
-    },
-    "Get Bedrock Summary": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::bedrock:invokeModel",
-      "Parameters": {
-        "ModelId": "${ModelId}",
-        "Body": {
-          "messages": [
-            {
-              "role": "user",
-              "content": [
+    "Comment": "Receives S3 Event when new emails are delivered by SES, parses useful fields, extracts attachments, generates an AI summary, and puts a rich event message to Event Bridge to trigger downstream processing and automation.",
+    "StartAt": "Parse Message and Decode Attachments",
+    "States": {
+        "Parse Message and Decode Attachments": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "${DeliveryLambdaArn}"
+            },
+            "Retry": [
                 {
-                  "text.$": "States.Format('What is the goal of the sender of this email in 12 words or less? \n{}', $.message.text)"
+                    "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException",
+                        "Lambda.TooManyRequestsException"
+                    ],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 6,
+                    "BackoffRate": 2
                 }
-              ]
+            ],
+            "Next": "Get Bedrock Summary",
+            "ResultSelector": {
+                "message.$": "$.Payload"
             }
-          ],
-          "inferenceConfig": {
-            "maxTokens": 50,
-            "temperature": 0.7
-          }
-        }
-      },
-      "Next": "Test for Good Response",
-      "ResultPath": "$.bedrock",
-      "ResultSelector": {
-        "response.$": "$.Body"
-      },
-      "Catch": [
-        {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
-          "Next": "Update Mailbox Indexes",
-          "ResultPath": "$.bedrock.error"
-        }
-      ]
-    },
-    "Test for Good Response": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "And": [
-            {
-              "Variable": "$.bedrock.response.output",
-              "IsPresent": true
-            },
-            {
-              "Variable": "$.bedrock.response.output.message",
-              "IsPresent": true
-            },
-            {
-              "Variable": "$.bedrock.response.output.message.content[0]",
-              "IsPresent": true
-            },
-            {
-              "Variable": "$.bedrock.response.output.message.content[0].text",
-              "IsPresent": true
-            }
-          ],
-          "Next": "Copy Summary from Bedrock Response"
-        }
-      ],
-      "Default": "Update Mailbox Indexes"
-    },
-    "Copy Summary from Bedrock Response": {
-      "Type": "Pass",
-      "Next": "Merge Message and Bedrock Summary",
-      "Parameters": {
-        "message.$": "$.message",
-        "bedrock": {
-          "summary.$": "$.bedrock.response.output.message.content[0].text"
-        }
-      }
-    },
-    "Merge Message and Bedrock Summary": {
-      "Type": "Pass",
-      "Next": "Update Mailbox Indexes",
-      "Parameters": {
-        "message.$": "States.JsonMerge($.message,$.bedrock,false)"
-      }
-    },
-    "Update Mailbox Indexes": {
-      "Type": "Map",
-      "ItemProcessor": {
-        "ProcessorConfig": {
-          "Mode": "INLINE"
         },
-        "StartAt": "Add to Mailbox",
-        "States": {
-          "Add to Mailbox": {
+        "Get Bedrock Summary": {
             "Type": "Task",
-            "Resource": "arn:aws:states:::dynamodb:putItem",
+            "Resource": "arn:aws:states:::bedrock:invokeModel",
             "Parameters": {
-              "TableName": "${TableName}",
-              "Item": {
-                "PK": {
-                  "S.$": "States.Format('MSG|{}|{}',$.recipient,States.ArrayGetItem(States.StringSplit($.message.date,'T'),0))"
-                },
-                "SK": {
-                  "S.$": "$.message.message_id"
-                },
-                "GSI1PK": {
-                  "S.$": "States.Format('MSG|{}',$.message.message_id)"
-                },
-                "GSI1SK": {
-                  "S.$": "States.Format('{}|{}',$.recipient,States.ArrayGetItem(States.StringSplit($.message.date,'T'),0))"
-                },
-                "Date": {
-                  "S.$": "$.message.date"
-                },
-                "Flags": {
-                  "SS": [
-                    "Inbox"
-                  ]
-                },
-                "DeliveryRegion": {
-                  "S.$": "$.message.delivery_region"
-                },
-                "PayloadUri": {
-                  "S.$": "$.message.payload_uri"
+                "ModelId": "${ModelId}",
+                "Body": {
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "text.$": "States.Format('The goal of the sender of the email below in 12 words or less?\n---\nSubject: {}\n Text: {}\n', $message.subject, $.message.text)"
+                                }
+                            ]
+                        }
+                    ],
+                    "inferenceConfig": {
+                        "maxTokens": 50,
+                        "temperature": 0.7
+                    }
                 }
-              }
             },
-            "Next": "Increment Daily Count",
+            "Next": "Test for Good Response",
+            "ResultPath": "$.bedrock",
+            "ResultSelector": {
+                "response.$": "$.Body"
+            },
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "Next": "Update Mailbox Indexes",
+                    "ResultPath": "$.bedrock.error"
+                }
+            ]
+        },
+        "Test for Good Response": {
+            "Type": "Choice",
+            "Choices": [
+                {
+                    "And": [
+                        {
+                            "Variable": "$.bedrock.response.output",
+                            "IsPresent": true
+                        },
+                        {
+                            "Variable": "$.bedrock.response.output.message",
+                            "IsPresent": true
+                        },
+                        {
+                            "Variable": "$.bedrock.response.output.message.content[0]",
+                            "IsPresent": true
+                        },
+                        {
+                            "Variable": "$.bedrock.response.output.message.content[0].text",
+                            "IsPresent": true
+                        }
+                    ],
+                    "Next": "Copy Summary from Bedrock Response"
+                }
+            ],
+            "Default": "Update Mailbox Indexes"
+        },
+        "Copy Summary from Bedrock Response": {
+            "Type": "Pass",
+            "Next": "Merge Message and Bedrock Summary",
+            "Parameters": {
+                "message.$": "$.message",
+                "bedrock": {
+                    "summary.$": "$.bedrock.response.output.message.content[0].text"
+                }
+            }
+        },
+        "Merge Message and Bedrock Summary": {
+            "Type": "Pass",
+            "Next": "Update Mailbox Indexes",
+            "Parameters": {
+                "message.$": "States.JsonMerge($.message,$.bedrock,false)"
+            }
+        },
+        "Update Mailbox Indexes": {
+            "Type": "Map",
+            "ItemProcessor": {
+                "ProcessorConfig": {
+                    "Mode": "INLINE"
+                },
+                "StartAt": "Add to Mailbox",
+                "States": {
+                    "Add to Mailbox": {
+                        "Type": "Task",
+                        "Resource": "arn:aws:states:::dynamodb:putItem",
+                        "Parameters": {
+                            "TableName": "${TableName}",
+                            "Item": {
+                                "PK": {
+                                    "S.$": "States.Format('MSG|{}|{}',$.recipient,States.ArrayGetItem(States.StringSplit($.message.date,'T'),0))"
+                                },
+                                "SK": {
+                                    "S.$": "$.message.message_id"
+                                },
+                                "GSI1PK": {
+                                    "S.$": "States.Format('MSG|{}',$.message.message_id)"
+                                },
+                                "GSI1SK": {
+                                    "S.$": "States.Format('{}|{}',$.recipient,States.ArrayGetItem(States.StringSplit($.message.date,'T'),0))"
+                                },
+                                "Date": {
+                                    "S.$": "$.message.date"
+                                },
+                                "Flags": {
+                                    "SS": [
+                                        "Inbox"
+                                    ]
+                                },
+                                "DeliveryRegion": {
+                                    "S.$": "$.message.delivery_region"
+                                },
+                                "PayloadUri": {
+                                    "S.$": "$.message.payload_uri"
+                                }
+                            }
+                        },
+                        "Next": "Increment Daily Count",
+                        "ResultPath": null
+                    },
+                    "Increment Daily Count": {
+                        "Type": "Task",
+                        "Resource": "arn:aws:states:::dynamodb:updateItem",
+                        "Parameters": {
+                            "TableName": "${TableName}",
+                            "Key": {
+                                "PK": {
+                                    "S.$": "States.Format('MSG_CNT|{}', States.ArrayGetItem(States.StringSplit($.message.date,'T'),0))"
+                                },
+                                "SK": {
+                                    "S.$": "$.recipient"
+                                }
+                            },
+                            "UpdateExpression": "ADD #cnt :one",
+                            "ExpressionAttributeNames": {
+                                "#cnt": "count"
+                            },
+                            "ExpressionAttributeValues": {
+                                ":one": {
+                                    "N": "1"
+                                }
+                            }
+                        },
+                        "End": true,
+                        "ResultPath": null
+                    }
+                }
+            },
+            "Next": "Send Summary Event",
+            "ItemsPath": "$.message.recipients",
+            "ItemSelector": {
+                "recipient.$": "$$.Map.Item.Value",
+                "message.$": "$.message"
+            },
             "ResultPath": null
-          },
-          "Increment Daily Count": {
+        },
+        "Send Summary Event": {
             "Type": "Task",
-            "Resource": "arn:aws:states:::dynamodb:updateItem",
+            "Resource": "arn:aws:states:::aws-sdk:eventbridge:putEvents",
             "Parameters": {
-              "TableName": "${TableName}",
-              "Key": {
-                "PK": {
-                  "S.$": "States.Format('MSG_CNT|{}', States.ArrayGetItem(States.StringSplit($.message.date,'T'),0))"
-                },
-                "SK": {
-                  "S.$": "$.recipient"
-                }
-              },
-              "UpdateExpression": "ADD #cnt :one",
-              "ExpressionAttributeNames": {
-                "#cnt": "count"
-              },
-              "ExpressionAttributeValues": {
-                ":one": {
-                  "N": "1"
-                }
-              }
+                "Entries": [
+                    {
+                        "Detail.$": "$.message",
+                        "DetailType": "summary",
+                        "Source": "email-delivery"
+                    }
+                ]
             },
-            "End": true,
-            "ResultPath": null
-          }
+            "End": true
         }
-      },
-      "Next": "Send Summary Event",
-      "ItemsPath": "$.message.recipients",
-      "ItemSelector": {
-        "recipient.$": "$$.Map.Item.Value",
-        "message.$": "$.message"
-      },
-      "ResultPath": null
-    },
-    "Send Summary Event": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::aws-sdk:eventbridge:putEvents",
-      "Parameters": {
-        "Entries": [
-          {
-            "Detail.$": "$.message",
-            "DetailType": "summary",
-            "Source": "email-delivery"
-          }
-        ]
-      },
-      "End": true
     }
-  }
 }
