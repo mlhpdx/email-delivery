@@ -29,7 +29,7 @@ public static class Extensions {
     public static JsonArray ToJsonArray(this IEnumerable<string> strings) =>
          new(strings.Select(s => JsonValue.Create(s)).ToArray());
 
-    public static Task? CopyToStream(this string text, Stream stream) {
+    public static Task? CopyToStream(this string? text, Stream stream) {
         if (text == null) return null;
         using var ms = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(text));
         return ms.CopyToAsync(stream);
@@ -78,7 +78,7 @@ public class Function(Amazon.S3.IAmazonS3 s3)
         async Task<string> decode_part_as_content(MimeKit.MimePart part, int index, [CallerArgumentExpression("part")] string prefix = null!) {
             var part_key = $"{content_prefix}/{part.ContentDisposition?.FileName ?? part.ContentId ?? $"{prefix??"part"}_{index}.{part.ContentType.MediaType}"}"; 
             using (var upload = new S3UploadStream(_s3, bucket_name, part_key)) {
-                await part.Content.DecodeToAsync(upload);
+                await (part.Content?.DecodeToAsync(upload) ?? Task.CompletedTask);
             }
             return part_key;
         }
@@ -115,7 +115,7 @@ public class Function(Amazon.S3.IAmazonS3 s3)
         var contents = new[] {
             new { label = "text", content = message.TextBody, uri = $"s3://{bucket_name}/{content_prefix}/_body.txt" },
             new { label = "html", content = message.HtmlBody, uri = $"s3://{bucket_name}/{content_prefix}/_body.html"},
-            new { label = "meta.json", content = result.ToString(), uri = $"s3://{bucket_name}/{content_prefix}/_meta.json"}
+            new { label = "meta.json", content = (string?)result.ToString(), uri = $"s3://{bucket_name}/{content_prefix}/_meta.json"}
         }.Where(c => c.content != null);
 
         await Console.Out.WriteLineAsync($"\nContent Uris: {string.Join("\n - ", contents.Select(c => c.uri))}.");

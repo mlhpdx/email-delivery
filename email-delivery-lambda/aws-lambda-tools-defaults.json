@@ -1,5 +1,5 @@
 
 {
     "function-name" : "email-delivery",
-    "function-runtime" : "dotnet8"
+    "function-runtime" : "dotnet10"
 }
