@@ -38,7 +38,7 @@
                             "role": "user",
                             "content": [
                                 {
-                                    "text.$": "States.Format('The goal of the sender of the email below in 12 words or less?\n---\nSubject: {}\n Text: {}\n', $message.subject, $.message.text)"
+                                    "text.$": "States.Format('The goal of the sender of the email below in 12 words or less?\n---\nSubject: {}\n Text: {}\n', $.message.subject, $.message.text)"
                                 }
                             ]
                         }
